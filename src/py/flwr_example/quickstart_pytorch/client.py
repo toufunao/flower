@@ -20,9 +20,12 @@ import torch
 
 import flwr as fl
 
-from . import mnist
+import mnist
 
-DATA_ROOT = "./data/mnist"
+DATA_ROOT = "/Users/wurj/GNN/flower/src/py/flwr_example/quickstart_pytorch/data/mnist"
+import os
+
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 if __name__ == "__main__":
     # Training settings
@@ -63,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--epochs",
         type=int,
-        default=14,
+        default=1,
         metavar="N",
         help="number of epochs to train (default: 14)",
     )
