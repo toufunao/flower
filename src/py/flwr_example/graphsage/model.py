@@ -6,7 +6,7 @@ from torch.autograd import Variable
 import numpy as np
 import time
 import random
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 from collections import defaultdict
 
 from encoders import Encoder
@@ -104,9 +104,9 @@ def run_cora():
         times.append(end_time - start_time)
         print(batch, loss.data)
 
-
     val_output = graphsage.forward(val)
     print("Validation F1:", f1_score(labels[val], val_output.data.numpy().argmax(axis=1), average="micro"))
+    print("Accuracy: ", accuracy_score())
     print("Average batch time:", np.mean(times))
 
 

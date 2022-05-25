@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 import random
-
+from sklearn.linear_model import LogisticRegression
 """
 Set of modules for aggregating embeddings of neighbors.
 """
