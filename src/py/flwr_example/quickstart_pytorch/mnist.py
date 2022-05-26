@@ -24,7 +24,6 @@ https://github.com/pytorch/examples/blob/master/mnist/main.py
 
 # mypy: ignore-errors
 # pylint: disable=W0223
-
 import timeit
 from collections import OrderedDict
 from typing import Tuple

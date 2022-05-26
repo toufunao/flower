@@ -14,7 +14,6 @@
 # ==============================================================================
 
 from argparse import ArgumentParser
-
 import numpy as np
 import torch
 
@@ -23,6 +22,8 @@ import flwr as fl
 import mnist
 
 DATA_ROOT = "/Users/wurj/GNN/flower/src/py/flwr_example/quickstart_pytorch/data/mnist"
+DATA_ROOT = "/opt/flower/data_dir"
+
 import os
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
