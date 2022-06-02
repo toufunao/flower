@@ -166,5 +166,15 @@ class CifarClient(fl.client.NumPyClient):
         return loss, len(test_mask), {"accuracy": float(accuracy)}
 
 
+from argparse import ArgumentParser
+
 if __name__ == "__main__":
-    fl.client.start_numpy_client("[::]:8080", client=CifarClient())
+    parser = ArgumentParser(description="PyTorch MNIST Example")
+    parser.add_argument(
+        "--server_address",
+        type=str,
+        default="[::]:8080",
+        help=f"gRPC server address (default: '[::]:8080')",
+    )
+    args = parser.parse_args()
+    fl.client.start_numpy_client(args.server_address, client=CifarClient())
