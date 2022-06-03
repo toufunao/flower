@@ -10,8 +10,8 @@ from argparse import ArgumentParser
 from sklearn.metrics import accuracy_score
 from collections import defaultdict
 
-from .encoders import Encoder
-from .aggregators import MeanAggregator
+from encoders import Encoder
+from aggregators import MeanAggregator
 
 import flwr as fl
 from collections import OrderedDict
@@ -49,7 +49,7 @@ def load_cora():
     labels = np.empty((num_nodes, 1), dtype=np.int64)
     node_map = {}
     label_map = {}
-    with open("cora/cora.content") as fp:
+    with open("../cora/cora.content") as fp:
         for i, line in enumerate(fp):
             info = line.strip().split()
             feat_data[i, :] = list(map(float, info[1:-1]))
@@ -59,7 +59,7 @@ def load_cora():
             labels[i] = label_map[info[-1]]
 
     adj_lists = defaultdict(set)
-    with open("cora/cora.cites") as fp:
+    with open("../cora/cora.cites") as fp:
         for i, line in enumerate(fp):
             info = line.strip().split()
             paper1 = node_map[info[0]]

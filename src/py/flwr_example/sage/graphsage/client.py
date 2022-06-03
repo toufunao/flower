@@ -10,8 +10,8 @@ from sklearn.metrics import accuracy_score
 from collections import defaultdict
 
 from argparse import ArgumentParser
-from .encoders import Encoder
-from .aggregators import MeanAggregator
+from encoders import Encoder
+from aggregators import MeanAggregator
 
 import flwr as fl
 from collections import OrderedDict
@@ -20,6 +20,7 @@ from collections import OrderedDict
 Simple supervised GraphSAGE model as well as examples running the model
 on the Cora and Pubmed datasets.
 """
+log_info = []
 
 
 class SupervisedGraphSage(nn.Module):
@@ -49,7 +50,7 @@ def load_cora():
     labels = np.empty((num_nodes, 1), dtype=np.int64)
     node_map = {}
     label_map = {}
-    with open("cora/cora.content") as fp:
+    with open("../cora/cora.content") as fp:
         for i, line in enumerate(fp):
             info = line.strip().split()
             feat_data[i, :] = list(map(float, info[1:-1]))
@@ -59,7 +60,7 @@ def load_cora():
             labels[i] = label_map[info[-1]]
 
     adj_lists = defaultdict(set)
-    with open("cora/cora.cites") as fp:
+    with open("../cora/cora.cites") as fp:
         for i, line in enumerate(fp):
             info = line.strip().split()
             paper1 = node_map[info[0]]
@@ -118,7 +119,7 @@ def f_test(graphsage, val):
     return loss.data.item(), acc
 
 
-class CifarClient(fl.client.NumPyClient):
+class SageClient(fl.client.NumPyClient):
     def get_parameters(self):
         return [val.cpu().numpy() for _, val in graphsage.state_dict().items()]
 
@@ -139,17 +140,26 @@ class CifarClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         loss, accuracy = f_test(graphsage, test)
         print(loss, len(test), {"accuracy": float(accuracy)})
-
+        log_info.append([loss, float(accuracy)])
         return loss, len(test), {"accuracy": float(accuracy)}
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="PyTorch MNIST Example")
+    parser = ArgumentParser(description="Sage Client")
     parser.add_argument(
         "--server_address",
         type=str,
         default="[::]:8080",
         help=f"gRPC server address (default: '[::]:8080')",
     )
+    parser.add_argument(
+        "--n",
+        type=int,
+        default=0,
+        help=f"Training number. Default to 0",
+    )
     args = parser.parse_args()
-    fl.client.start_numpy_client(args.server_address, client=CifarClient())
+    fl.client.start_numpy_client(args.server_address, client=SageClient())
+    with open(f'../log/client{args.n}.log', mode='a', encoding='utf-8') as f:
+        for item in log_info:
+            f.write(str(item[0]) + '     ' + str(item[1]) + '\n')
