@@ -13,6 +13,8 @@ from collections import OrderedDict
 
 sys.path.append("cora")
 
+log_info = []
+
 
 class GraphConvolution(nn.Module):
     def __init__(self, input_dim, output_dim, use_bias=True):
@@ -140,10 +142,12 @@ def test(model, tensor_val_mask):
         predict_y = test_mask_logits.max(1)[1]
         accuarcy = torch.eq(predict_y, tensor_y[tensor_val_mask]).float().mean()
         loss += criterion(test_mask_logits, tensor_y[tensor_val_mask]).item()
+    print(loss, float(accuarcy))
+    log_info.append([loss, float(accuarcy)])
     return loss, accuarcy
 
 
-class CifarClient(fl.client.NumPyClient):
+class GCNClient(fl.client.NumPyClient):
     def get_parameters(self):
         return [val.cpu().numpy() for _, val in model.state_dict().items()]
 
@@ -169,12 +173,21 @@ class CifarClient(fl.client.NumPyClient):
 from argparse import ArgumentParser
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="PyTorch MNIST Example")
+    parser = ArgumentParser(description="GCN Client")
     parser.add_argument(
         "--server_address",
         type=str,
         default="[::]:8080",
         help=f"gRPC server address (default: '[::]:8080')",
     )
+    parser.add_argument(
+        "--n",
+        type=int,
+        default=0,
+        help=f"Training number. Default to 0",
+    )
     args = parser.parse_args()
-    fl.client.start_numpy_client(args.server_address, client=CifarClient())
+    fl.client.start_numpy_client(args.server_address, client=GCNClient())
+    with open(f'log/client{args.n}.log', mode='a', encoding='utf-8') as f:
+        for item in log_info:
+            f.write(str(item[0]) + '     ' + str(item[1]) + '\n')
