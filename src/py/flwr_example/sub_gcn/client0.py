@@ -194,4 +194,3 @@ if __name__ == "__main__":
         for item in log_info:
             f.write(str(item[0]) + '     ' + str(item[1]) + '\n')
     print(f'training completed')
-

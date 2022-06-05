@@ -141,7 +141,7 @@ def test(model, tensor_val_mask):
         predict_y = test_mask_logits.max(1)[1]
         accuarcy = torch.eq(predict_y, tensor_y[tensor_val_mask]).float().mean()
         loss += criterion(test_mask_logits, tensor_y[tensor_val_mask]).item()
-        log_info.append((loss, float(accuarcy)))
+        log_info.append([loss, float(accuarcy)])
         print(loss,accuarcy)
     return loss, accuarcy
 
