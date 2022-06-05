@@ -14,7 +14,6 @@
 # ==============================================================================
 """Flower server."""
 
-
 import concurrent.futures
 import timeit
 from logging import DEBUG, INFO, WARNING
@@ -93,8 +92,9 @@ class Server:
     """Flower server."""
 
     def __init__(
-        self, client_manager: ClientManager, strategy: Optional[Strategy] = None
+            self, client_manager: ClientManager, strategy: Optional[Strategy] = None
     ) -> None:
+        # print('server init')
         self._client_manager: ClientManager = client_manager
         self.parameters: Parameters = Parameters(
             tensors=[], tensor_type="numpy.ndarray"
@@ -103,6 +103,7 @@ class Server:
 
     def set_strategy(self, strategy: Strategy) -> None:
         """Replace server strategy."""
+        # print('server set_strategy')
         self.strategy = strategy
 
     def client_manager(self) -> ClientManager:
@@ -111,6 +112,7 @@ class Server:
 
     # pylint: disable=too-many-locals
     def fit(self, num_rounds: int) -> History:
+        # print('server fit')
         """Run federated averaging for a number of rounds."""
         history = History()
 
@@ -135,6 +137,7 @@ class Server:
 
         for current_round in range(1, num_rounds + 1):
             # Train model and replace previous global model
+            # print('current round', str(current_round), '************')
             res_fit = self.fit_round(rnd=current_round)
             if res_fit:
                 parameters_prime, _, _ = res_fit  # fit_metrics_aggregated
@@ -157,14 +160,15 @@ class Server:
                 history.add_metrics_centralized(rnd=current_round, metrics=metrics_cen)
 
             # Evaluate model on a sample of available clients
-            res_fed = self.evaluate_round(rnd=current_round)
-            if res_fed:
-                loss_fed, evaluate_metrics_fed, _ = res_fed
-                if loss_fed:
-                    history.add_loss_distributed(rnd=current_round, loss=loss_fed)
-                    history.add_metrics_distributed(
-                        rnd=current_round, metrics=evaluate_metrics_fed
-                    )
+            if current_round % 10 == 0:
+                res_fed = self.evaluate_round(rnd=current_round)
+                if res_fed:
+                    loss_fed, evaluate_metrics_fed, _ = res_fed
+                    if loss_fed:
+                        history.add_loss_distributed(rnd=current_round, loss=loss_fed)
+                        history.add_metrics_distributed(
+                            rnd=current_round, metrics=evaluate_metrics_fed
+                        )
 
         # Bookkeeping
         end_time = timeit.default_timer()
@@ -173,9 +177,10 @@ class Server:
         return history
 
     def evaluate(
-        self, rnd: int
+            self, rnd: int
     ) -> Optional[Tuple[Optional[float], EvaluateResultsAndFailures]]:
         """Validate current global model on a number of clients."""
+        # print('server evaluate')
         log(WARNING, DEPRECATION_WARNING_EVALUATE)
         res = self.evaluate_round(rnd)
         if res is None:
@@ -185,11 +190,12 @@ class Server:
         return loss, results_and_failures
 
     def evaluate_round(
-        self, rnd: int
+            self, rnd: int
     ) -> Optional[
         Tuple[Optional[float], Dict[str, Scalar], EvaluateResultsAndFailures]
     ]:
         """Validate current global model on a number of clients."""
+        print('server evaluate_round')
 
         # Get clients and their respective instructions from strategy
         client_instructions = self.strategy.configure_evaluate(
@@ -235,11 +241,12 @@ class Server:
         return loss_aggregated, metrics_aggregated, (results, failures)
 
     def fit_round(
-        self, rnd: int
+            self, rnd: int
     ) -> Optional[
         Tuple[Optional[Parameters], Dict[str, Scalar], FitResultsAndFailures]
     ]:
         """Perform a single round of federated averaging."""
+        # print('server fit_round')
 
         # Get clients and their respective instructions from strategy
         client_instructions = self.strategy.configure_fit(
@@ -287,11 +294,13 @@ class Server:
 
     def disconnect_all_clients(self) -> None:
         """Send shutdown signal to all clients."""
+        # print('server disconnect')
         all_clients = self._client_manager.all()
         _ = shutdown(clients=[all_clients[k] for k in all_clients.keys()])
 
     def _get_initial_parameters(self) -> Parameters:
         """Get initial parameters from one of the available clients."""
+        # print('server get_init_params')
 
         # Server-side parameter initialization
         parameters: Optional[Parameters] = self.strategy.initialize_parameters(
@@ -329,7 +338,7 @@ def shutdown(clients: List[ClientProxy]) -> ReconnectResultsAndFailures:
 
 
 def reconnect_client(
-    client: ClientProxy, reconnect: Reconnect
+        client: ClientProxy, reconnect: Reconnect
 ) -> Tuple[ClientProxy, Disconnect]:
     """Instruct a single client to disconnect and (optionally) reconnect
     later."""
@@ -338,9 +347,10 @@ def reconnect_client(
 
 
 def fit_clients(
-    client_instructions: List[Tuple[ClientProxy, FitIns]]
+        client_instructions: List[Tuple[ClientProxy, FitIns]]
 ) -> FitResultsAndFailures:
     """Refine parameters concurrently on all selected clients."""
+    # print('fit client sssssss')
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(fit_client, c, ins) for c, ins in client_instructions
@@ -362,14 +372,16 @@ def fit_clients(
 
 def fit_client(client: ClientProxy, ins: FitIns) -> Tuple[ClientProxy, FitRes]:
     """Refine parameters on a single client."""
+    # print('fit client')
     fit_res = client.fit(ins)
     return client, fit_res
 
 
 def evaluate_clients(
-    client_instructions: List[Tuple[ClientProxy, EvaluateIns]]
+        client_instructions: List[Tuple[ClientProxy, EvaluateIns]]
 ) -> EvaluateResultsAndFailures:
     """Evaluate parameters concurrently on all selected clients."""
+    # print('evaluate client ssssss')
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(evaluate_client, c, ins) for c, ins in client_instructions
@@ -390,8 +402,9 @@ def evaluate_clients(
 
 
 def evaluate_client(
-    client: ClientProxy, ins: EvaluateIns
+        client: ClientProxy, ins: EvaluateIns
 ) -> Tuple[ClientProxy, EvaluateRes]:
     """Evaluate parameters on a single client."""
+    # print('evaluate client')
     evaluate_res = client.evaluate(ins)
     return client, evaluate_res

@@ -123,6 +123,7 @@ class FedAvg(Strategy):
             Initial global model parameters.
         """
         super().__init__()
+        # print('avg init')
 
         if (
             min_fit_clients > min_available_clients
@@ -148,11 +149,13 @@ class FedAvg(Strategy):
     def num_fit_clients(self, num_available_clients: int) -> Tuple[int, int]:
         """Return the sample size and the required number of available
         clients."""
+        # print('avg num_fit_clients')
         num_clients = int(num_available_clients * self.fraction_fit)
         return max(num_clients, self.min_fit_clients), self.min_available_clients
 
     def num_evaluation_clients(self, num_available_clients: int) -> Tuple[int, int]:
         """Use a fraction of available clients for evaluation."""
+        # print('avg num_eval_clients')
         num_clients = int(num_available_clients * self.fraction_eval)
         return max(num_clients, self.min_eval_clients), self.min_available_clients
 
@@ -160,6 +163,7 @@ class FedAvg(Strategy):
         self, client_manager: ClientManager
     ) -> Optional[Parameters]:
         """Initialize global model parameters."""
+        # print('avg init params')
         initial_parameters = self.initial_parameters
         self.initial_parameters = None  # Don't keep initial parameters in memory
         if isinstance(initial_parameters, list):
@@ -171,6 +175,7 @@ class FedAvg(Strategy):
         self, parameters: Parameters
     ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
         """Evaluate model parameters using an evaluation function."""
+        # print('avg evaluate')
         if self.eval_fn is None:
             # No evaluation function provided
             return None
@@ -190,6 +195,7 @@ class FedAvg(Strategy):
         self, rnd: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
+        # print('avg config_fit')
         config = {}
         if self.on_fit_config_fn is not None:
             # Custom fit config function provided
@@ -211,6 +217,7 @@ class FedAvg(Strategy):
         self, rnd: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, EvaluateIns]]:
         """Configure the next round of evaluation."""
+        # print('avg config eval')
         # Do not configure federated evaluation if a centralized evaluation
         # function is provided
         if self.eval_fn is not None:
@@ -244,6 +251,7 @@ class FedAvg(Strategy):
         failures: List[BaseException],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         """Aggregate fit results using weighted average."""
+        # print('avg agg_fit')
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -263,6 +271,7 @@ class FedAvg(Strategy):
         failures: List[BaseException],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
         """Aggregate evaluation losses using weighted average."""
+        # print('avg agg_eval')
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted

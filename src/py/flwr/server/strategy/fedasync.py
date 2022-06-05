@@ -1,4 +1,3 @@
-
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -17,7 +16,7 @@ from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 
-from .aggregate import aggregate, weighted_loss_avg
+from .aggregate import aggregate, weighted_loss_avg, aggregate_async
 from .strategy import Strategy
 
 DEPRECATION_WARNING = """
@@ -57,24 +56,24 @@ than or equal to the values of `min_fit_clients` and `min_eval_clients`.
 """
 
 
-class FedAvg(Strategy):
+class FedAsync(Strategy):
     """Configurable FedAvg strategy implementation."""
 
     # pylint: disable=too-many-arguments,too-many-instance-attributes
     def __init__(
-        self,
-        fraction_fit: float = 0.1,
-        fraction_eval: float = 0.1,
-        min_fit_clients: int = 2,
-        min_eval_clients: int = 2,
-        min_available_clients: int = 2,
-        eval_fn: Optional[
-            Callable[[Weights], Optional[Tuple[float, Dict[str, Scalar]]]]
-        ] = None,
-        on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
-        on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
-        accept_failures: bool = True,
-        initial_parameters: Optional[Parameters] = None,
+            self,
+            fraction_fit: float = 0.1,
+            fraction_eval: float = 0.1,
+            min_fit_clients: int = 2,
+            min_eval_clients: int = 2,
+            min_available_clients: int = 2,
+            eval_fn: Optional[
+                Callable[[Weights], Optional[Tuple[float, Dict[str, Scalar]]]]
+            ] = None,
+            on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+            on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+            accept_failures: bool = True,
+            initial_parameters: Optional[Parameters] = None,
     ) -> None:
         """Federated Averaging strategy.
 
@@ -104,10 +103,11 @@ class FedAvg(Strategy):
             Initial global model parameters.
         """
         super().__init__()
+        # print('async init')
 
         if (
-            min_fit_clients > min_available_clients
-            or min_eval_clients > min_available_clients
+                min_fit_clients > min_available_clients
+                or min_eval_clients > min_available_clients
         ):
             log(WARNING, WARNING_MIN_AVAILABLE_CLIENTS_TOO_LOW)
 
@@ -129,18 +129,21 @@ class FedAvg(Strategy):
     def num_fit_clients(self, num_available_clients: int) -> Tuple[int, int]:
         """Return the sample size and the required number of available
         clients."""
+        # print('async num_fit_clients')
         num_clients = int(num_available_clients * self.fraction_fit)
         return max(num_clients, self.min_fit_clients), self.min_available_clients
 
     def num_evaluation_clients(self, num_available_clients: int) -> Tuple[int, int]:
         """Use a fraction of available clients for evaluation."""
+        # print('async num_eval_clients')
         num_clients = int(num_available_clients * self.fraction_eval)
         return max(num_clients, self.min_eval_clients), self.min_available_clients
 
     def initialize_parameters(
-        self, client_manager: ClientManager
+            self, client_manager: ClientManager
     ) -> Optional[Parameters]:
         """Initialize global model parameters."""
+        # print('async init params')
         initial_parameters = self.initial_parameters
         self.initial_parameters = None  # Don't keep initial parameters in memory
         if isinstance(initial_parameters, list):
@@ -149,9 +152,10 @@ class FedAvg(Strategy):
         return initial_parameters
 
     def evaluate(
-        self, parameters: Parameters
+            self, parameters: Parameters
     ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
         """Evaluate model parameters using an evaluation function."""
+        # print('async evaluate')
         if self.eval_fn is None:
             # No evaluation function provided
             return None
@@ -168,9 +172,10 @@ class FedAvg(Strategy):
         return loss, metrics
 
     def configure_fit(
-        self, rnd: int, parameters: Parameters, client_manager: ClientManager
+            self, rnd: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
+        # print('async config_fit')
         config = {}
         if self.on_fit_config_fn is not None:
             # Custom fit config function provided
@@ -188,12 +193,46 @@ class FedAvg(Strategy):
         # Return client/config pairs
         return [(client, fit_ins) for client in clients]
 
+    # FedAsync function
+    def configure_fit_one(
+            self, rnd: int, parameters: Parameters, client: ClientProxy
+    ) -> Tuple[ClientProxy, FitIns]:
+        """Configure the next round of training."""
+        # print('async config_fit_1')
+        config = {}
+        global_round = rnd
+        if self.on_fit_config_fn is not None:
+            # Custom fit config function provided
+            config = self.on_fit_config_fn(rnd)
+        fit_ins = FitIns(parameters, config)
+        return client, fit_ins
+
+    def configure_evaluate_one(
+            self, rnd: int, parameters: Parameters, client: ClientProxy
+    ) -> Tuple[ClientProxy, EvaluateIns]:
+        """Configure the next round of evaluation."""
+        # Do not configure federated evaluation if a centralized evaluation
+        # function is provided
+        # print('async config_eval')
+        if self.eval_fn is not None:
+            return []
+
+        # Parameters and config
+        config = {}
+        if self.on_evaluate_config_fn is not None:
+            # Custom evaluation config function provided
+            config = self.on_evaluate_config_fn(rnd)
+        evaluate_ins = EvaluateIns(parameters, config)
+
+        return client, evaluate_ins
+
     def configure_evaluate(
-        self, rnd: int, parameters: Parameters, client_manager: ClientManager
+            self, rnd: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, EvaluateIns]]:
         """Configure the next round of evaluation."""
         # Do not configure federated evaluation if a centralized evaluation
         # function is provided
+        # print('async config_eval')
         if self.eval_fn is not None:
             return []
 
@@ -219,12 +258,13 @@ class FedAvg(Strategy):
         return [(client, evaluate_ins) for client in clients]
 
     def aggregate_fit(
-        self,
-        rnd: int,
-        results: List[Tuple[ClientProxy, FitRes]],
-        failures: List[BaseException],
+            self,
+            rnd: int,
+            results: List[Tuple[ClientProxy, FitRes]],
+            failures: List[BaseException],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         """Aggregate fit results using weighted average."""
+        # print('async agg_fit')
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -237,13 +277,38 @@ class FedAvg(Strategy):
         ]
         return weights_to_parameters(aggregate(weights_results)), {}
 
+    def weighted_aggregate_fit(
+            self,
+            rnd: int,
+            gl_parameters: Parameters,
+            results: List[Tuple[ClientProxy, FitRes]],
+            failures: List[BaseException],
+    ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
+        # print('async w_agg_fit')
+        if not results:
+            return None, {}
+            # Do not aggregate if there are failures and failures are not accepted
+        if not self.accept_failures and failures:
+            return None, {}
+            # Convert results
+        weights_results = [
+            (parameters_to_weights(fit_res.parameters), fit_res.num_examples)
+            for client, fit_res in results
+        ]
+        gl_weights = parameters_to_weights(gl_parameters)
+        # todo: weighted aggregated function
+        alpha = 0.5
+        res = weights_to_parameters(aggregate_async(gl_weights, weights_results, alpha))
+        return res, {}
+
     def aggregate_evaluate(
-        self,
-        rnd: int,
-        results: List[Tuple[ClientProxy, EvaluateRes]],
-        failures: List[BaseException],
+            self,
+            rnd: int,
+            results: List[Tuple[ClientProxy, EvaluateRes]],
+            failures: List[BaseException],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
         """Aggregate evaluation losses using weighted average."""
+        # print('async agg_eval')
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -260,4 +325,3 @@ class FedAvg(Strategy):
             ]
         )
         return loss_aggregated, {}
-

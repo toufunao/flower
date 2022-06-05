@@ -119,7 +119,7 @@ def f_test(graphsage, val):
     return loss.data.item(), acc
 
 
-class CifarClient(fl.client.NumPyClient):
+class SageClient(fl.client.NumPyClient):
     def get_parameters(self):
         return [val.cpu().numpy() for _, val in graphsage.state_dict().items()]
 
@@ -143,7 +143,7 @@ class CifarClient(fl.client.NumPyClient):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="PyTorch MNIST Example")
+    parser = ArgumentParser(description="Sage Client")
     parser.add_argument(
         "--server_address",
         type=str,
@@ -151,4 +151,4 @@ if __name__ == "__main__":
         help=f"gRPC server address (default: '[::]:8080')",
     )
     args = parser.parse_args()
-    fl.client.start_numpy_client(args.server_address, client=CifarClient())
+    fl.client.start_numpy_client(args.server_address, client=SageClient())

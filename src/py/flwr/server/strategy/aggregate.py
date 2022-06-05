@@ -14,7 +14,6 @@
 # ==============================================================================
 """Aggregation functions for strategy implementations."""
 
-
 from functools import reduce
 from typing import List, Optional, Tuple
 
@@ -41,6 +40,25 @@ def aggregate(results: List[Tuple[Weights, int]]) -> Weights:
     return weights_prime
 
 
+def aggregate_async(
+        gl_weights: Weights, results: List[Tuple[Weights, int]], alpha: float
+) -> Weights:
+    """Update global model by weighted aggregation"""
+
+    for weights, progress in results:
+        c_weights = weights
+
+    c_weights_a = [each * alpha for each in c_weights]
+    gl_weights_a = [each * (1 - alpha) for each in gl_weights]
+
+    """ w_g(t) = (1-alpha)* w_g(t-1) + alpha * w_k(t-1)"""
+    weights_prime: Weights = [
+        reduce(np.add, layer_updates)
+        for layer_updates in zip(gl_weights_a, c_weights_a)
+    ]
+    return weights_prime
+
+
 def weighted_loss_avg(results: List[Tuple[int, float, Optional[float]]]) -> float:
     """Aggregate evaluation results obtained from multiple clients."""
     num_total_evaluation_examples = sum(
@@ -51,7 +69,7 @@ def weighted_loss_avg(results: List[Tuple[int, float, Optional[float]]]) -> floa
 
 
 def aggregate_qffl(
-    weights: Weights, deltas: List[Weights], hs_fll: List[Weights]
+        weights: Weights, deltas: List[Weights], hs_fll: List[Weights]
 ) -> Weights:
     """Compute weighted average based on  Q-FFL paper."""
     demominator = np.sum(np.asarray(hs_fll))

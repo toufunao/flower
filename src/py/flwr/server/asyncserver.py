@@ -1,4 +1,5 @@
 import concurrent.futures
+import time
 import timeit
 from logging import DEBUG, INFO, WARNING
 from typing import Dict, List, Optional, Tuple, Union
@@ -19,7 +20,8 @@ from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.history import History
-from flwr.server.strategy import FedAvg, Strategy
+from flwr.server.strategy import FedAvg, Strategy, FedAsync
+import queue
 
 DEPRECATION_WARNING_EVALUATE = """
 DEPRECATION WARNING: Method
@@ -71,21 +73,26 @@ ReconnectResultsAndFailures = Tuple[
     List[Tuple[ClientProxy, Disconnect]], List[BaseException]
 ]
 
+queue = queue.Queue()
+
 
 class AsyncServer:
     """Flower server."""
 
     def __init__(
-        self, client_manager: ClientManager, strategy: Optional[Strategy] = None
+            self, client_manager: ClientManager, strategy: Optional[Strategy] = None
     ) -> None:
+        # print('server init')
         self._client_manager: ClientManager = client_manager
         self.parameters: Parameters = Parameters(
             tensors=[], tensor_type="numpy.ndarray"
         )
-        self.strategy: Strategy = strategy if strategy is not None else FedAvg()
+        self.strategy: Strategy = strategy if strategy is not None else FedAsync()
+        self.current_round = 0
 
     def set_strategy(self, strategy: Strategy) -> None:
         """Replace server strategy."""
+        # print('server set_strategy')
         self.strategy = strategy
 
     def client_manager(self) -> ClientManager:
@@ -95,6 +102,7 @@ class AsyncServer:
     # pylint: disable=too-many-locals
     def fit(self, num_rounds: int) -> History:
         """Run federated averaging for a number of rounds."""
+        # print('server fit')
         history = History()
 
         # Initialize parameters
@@ -116,38 +124,142 @@ class AsyncServer:
         log(INFO, "FL starting")
         start_time = timeit.default_timer()
 
-        for current_round in range(1, num_rounds + 1):
-            # Train model and replace previous global model
-            res_fit = self.fit_round(rnd=current_round)
-            if res_fit:
-                parameters_prime, _, _ = res_fit  # fit_metrics_aggregated
-                if parameters_prime:
-                    self.parameters = parameters_prime
+        self.async_fit_rounds(history, num_rounds, start_time)
+        return history
 
-            # Evaluate model using strategy implementation
-            res_cen = self.strategy.evaluate(parameters=self.parameters)
-            if res_cen is not None:
-                loss_cen, metrics_cen = res_cen
-                log(
-                    INFO,
-                    "fit progress: (%s, %s, %s, %s)",
-                    current_round,
-                    loss_cen,
-                    metrics_cen,
-                    timeit.default_timer() - start_time,
+        # for current_round in range(1, num_rounds + 1):
+        #     # Train model and replace previous global model
+        #     res_fit = self.fit_round(rnd=current_round)
+        #     if res_fit:
+        #         parameters_prime, _, _ = res_fit  # fit_metrics_aggregated
+        #         if parameters_prime:
+        #             self.parameters = parameters_prime
+        #
+        #     # Evaluate model using strategy implementation
+        #     res_cen = self.strategy.evaluate(parameters=self.parameters)
+        #     if res_cen is not None:
+        #         loss_cen, metrics_cen = res_cen
+        #         log(
+        #             INFO,
+        #             "fit progress: (%s, %s, %s, %s)",
+        #             current_round,
+        #             loss_cen,
+        #             metrics_cen,
+        #             timeit.default_timer() - start_time,
+        #         )
+        #         history.add_loss_centralized(rnd=current_round, loss=loss_cen)
+        #         history.add_metrics_centralized(rnd=current_round, metrics=metrics_cen)
+        #
+        #     # Evaluate model on a sample of available clients
+        #     res_fed = self.evaluate_round(rnd=current_round)
+        #     if res_fed:
+        #         loss_fed, evaluate_metrics_fed, _ = res_fed
+        #         if loss_fed:
+        #             history.add_loss_distributed(rnd=current_round, loss=loss_fed)
+        #             history.add_metrics_distributed(
+        #                 rnd=current_round, metrics=evaluate_metrics_fed
+        #             )
+        #
+        # # Bookkeeping
+        # end_time = timeit.default_timer()
+        # elapsed = end_time - start_time
+        # log(INFO, "FL finished in %s", elapsed)
+        # return history
+
+    def async_fit_rounds(
+            self,
+            history: History,
+            num_rounds: int,
+            start_time
+    ) -> History:
+        """Perform asynchronous federated optimization."""
+        # Run federated learning for num_rounds
+        # print('server fit rounds')
+        log(INFO, "FedAsync starting")
+
+        # 刚开始让所有的clients都加入training
+        client_instructions = self.strategy.configure_fit(
+            rnd=self.current_round, parameters=self.parameters, client_manager=self._client_manager
+        )
+        if not client_instructions:
+            log(INFO, "fit_round: no clients selected, cancel")
+            return None
+        log(
+            DEBUG,
+            "fit_round: strategy sampled %s clients (out of %s)",
+            len(client_instructions),
+            self._client_manager.num_available(),
+        )
+
+        # Collect `fit` results from the queue
+        # 创建一个queue，当一个client完成返回后，加入队列
+        # 每次server从队列当中拿出一个，收完他的parameter后，更新global的parameter
+        # server直接让这个client基于新的parameter继续下去训练，不需要等其它人
+        flag = True
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=100)
+        [executor.submit(fit_client, c, ins) for c, ins in client_instructions]
+        while flag:
+            # print(f'queue length {queue.qsize()}')
+            if not queue.empty():
+                results: List[Tuple[ClientProxy, FitRes]] = []
+                result = queue.get()
+                results.append(result)
+                # print(' current round ', str(self.current_round))
+                # print('num round', str(num_rounds))
+                self.current_round += 1
+
+                # Aggregate training results
+                aggregated_result: Union[
+                    Tuple[Optional[Parameters], Dict[str, Scalar]],
+                    Optional[Weights],  # Deprecated
+                ] = self.strategy.weighted_aggregate_fit(rnd=self.current_round,
+                                                         gl_parameters=self.parameters,
+                                                         results=results, failures=[])
+
+                if aggregated_result is not None:
+                    parameters_aggregated, metrics_aggregated = aggregated_result
+                    self.parameters = parameters_aggregated
+                # strategy 要新加的function，直接返回当前的(client, FitIns)的tuple
+                client_instructions = self.strategy.configure_fit_one(
+                    rnd=self.current_round, parameters=self.parameters, client=result[0]
                 )
-                history.add_loss_centralized(rnd=current_round, loss=loss_cen)
-                history.add_metrics_centralized(rnd=current_round, metrics=metrics_cen)
+                s = time.time()
+                future = executor.submit(fit_client, client_instructions[0], client_instructions[1])
+                # future.exception()
 
-            # Evaluate model on a sample of available clients
-            res_fed = self.evaluate_round(rnd=current_round)
-            if res_fed:
-                loss_fed, evaluate_metrics_fed, _ = res_fed
-                if loss_fed:
-                    history.add_loss_distributed(rnd=current_round, loss=loss_fed)
-                    history.add_metrics_distributed(
-                        rnd=current_round, metrics=evaluate_metrics_fed
+                # print(time.time() - s)
+                # Evaluate model using strategy implementation
+                # if self.current_round % 10 == 0:
+                res_cen = self.strategy.evaluate(parameters=self.parameters)
+                if res_cen is not None:
+                    loss_cen, metrics_cen = res_cen
+                    log(
+                        INFO,
+                        "fit progress: (%s, %s, %s, %s)",
+                        int(self.current_round / 10),
+                        loss_cen,
+                        metrics_cen,
+                        timeit.default_timer() - start_time,
                     )
+                    history.add_loss_centralized(rnd=self.current_round, loss=loss_cen)
+                    history.add_metrics_centralized(rnd=self.current_round, metrics=metrics_cen)
+
+                    # local evaluation
+                if self.current_round % 10 == 0:
+                    print(future.exception())
+                    res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
+                    if res_fed:
+                        loss_fed, evaluate_metrics_fed, _ = res_fed
+                        if loss_fed:
+                            history.add_loss_distributed(rnd=self.current_round, loss=loss_fed)
+                            history.add_metrics_distributed(
+                                rnd=self.current_round, metrics=evaluate_metrics_fed
+                            )
+                # print(future.exception())
+
+            # print('num rounds', str(num_rounds))
+            if self.current_round == num_rounds:
+                flag = False
 
         # Bookkeeping
         end_time = timeit.default_timer()
@@ -156,9 +268,11 @@ class AsyncServer:
         return history
 
     def evaluate(
-        self, rnd: int
+            self, rnd: int
     ) -> Optional[Tuple[Optional[float], EvaluateResultsAndFailures]]:
         """Validate current global model on a number of clients."""
+        # print('server eval')
+
         log(WARNING, DEPRECATION_WARNING_EVALUATE)
         res = self.evaluate_round(rnd)
         if res is None:
@@ -167,12 +281,64 @@ class AsyncServer:
         loss, _, results_and_failures = res
         return loss, results_and_failures
 
-    def evaluate_round(
-        self, rnd: int
+    def evaluate_round_one(
+            self, rnd: int, client: ClientProxy
     ) -> Optional[
         Tuple[Optional[float], Dict[str, Scalar], EvaluateResultsAndFailures]
     ]:
         """Validate current global model on a number of clients."""
+        # print('server eval_round')
+
+        # Get clients and their respective instructions from strategy
+        client, ins = self.strategy.configure_evaluate_one(
+            rnd=rnd, parameters=self.parameters, client=client
+        )
+        if not client:
+            log(INFO, "evaluate_round: no clients selected, cancel")
+            return None
+        log(
+            DEBUG,
+            "evaluate_round: strategy sampled %s clients (out of %s)",
+            1,
+            self._client_manager.num_available(),
+        )
+
+        # Collect `evaluate` results from all clients participating in this round
+        cl, eval_res = evaluate_client(client, ins)
+        log(
+            DEBUG,
+            "evaluate_round",
+        )
+        results = []
+        results.append((cl, eval_res))
+
+        # Aggregate the evaluation results
+        aggregated_result: Union[
+            Tuple[Optional[float], Dict[str, Scalar]],
+            Optional[float],  # Deprecated
+        ] = self.strategy.aggregate_evaluate(rnd, results, [])
+
+        metrics_aggregated: Dict[str, Scalar] = {}
+        if aggregated_result is None:
+            # Backward-compatibility, this will be removed in a future update
+            log(WARNING, DEPRECATION_WARNING_EVALUATE_ROUND)
+            loss_aggregated = None
+        elif isinstance(aggregated_result, float):
+            # Backward-compatibility, this will be removed in a future update
+            log(WARNING, DEPRECATION_WARNING_EVALUATE_ROUND)
+            loss_aggregated = aggregated_result
+        else:
+            loss_aggregated, metrics_aggregated = aggregated_result
+
+        return loss_aggregated, metrics_aggregated, (results, [])
+
+    def evaluate_round(
+            self, rnd: int
+    ) -> Optional[
+        Tuple[Optional[float], Dict[str, Scalar], EvaluateResultsAndFailures]
+    ]:
+        """Validate current global model on a number of clients."""
+        # print('server eval_round')
 
         # Get clients and their respective instructions from strategy
         client_instructions = self.strategy.configure_evaluate(
@@ -218,11 +384,12 @@ class AsyncServer:
         return loss_aggregated, metrics_aggregated, (results, failures)
 
     def fit_round(
-        self, rnd: int
+            self, rnd: int
     ) -> Optional[
         Tuple[Optional[Parameters], Dict[str, Scalar], FitResultsAndFailures]
     ]:
         """Perform a single round of federated averaging."""
+        # print('server fit')
 
         # Get clients and their respective instructions from strategy
         client_instructions = self.strategy.configure_fit(
@@ -275,7 +442,7 @@ class AsyncServer:
 
     def _get_initial_parameters(self) -> Parameters:
         """Get initial parameters from one of the available clients."""
-
+        # print('server get_init_params')
         # Server-side parameter initialization
         parameters: Optional[Parameters] = self.strategy.initialize_parameters(
             client_manager=self._client_manager
@@ -312,7 +479,7 @@ def shutdown(clients: List[ClientProxy]) -> ReconnectResultsAndFailures:
 
 
 def reconnect_client(
-    client: ClientProxy, reconnect: Reconnect
+        client: ClientProxy, reconnect: Reconnect
 ) -> Tuple[ClientProxy, Disconnect]:
     """Instruct a single client to disconnect and (optionally) reconnect
     later."""
@@ -321,9 +488,11 @@ def reconnect_client(
 
 
 def fit_clients(
-    client_instructions: List[Tuple[ClientProxy, FitIns]]
+        client_instructions: List[Tuple[ClientProxy, FitIns]]
 ) -> FitResultsAndFailures:
     """Refine parameters concurrently on all selected clients."""
+    # print('server fit client sssssssss')
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(fit_client, c, ins) for c, ins in client_instructions
@@ -345,14 +514,19 @@ def fit_clients(
 
 def fit_client(client: ClientProxy, ins: FitIns) -> Tuple[ClientProxy, FitRes]:
     """Refine parameters on a single client."""
+    # print('server fit client')
     fit_res = client.fit(ins)
+    queue.put((client, fit_res))
+    # print(f'queue size {queue.qsize()}')
     return client, fit_res
 
 
 def evaluate_clients(
-    client_instructions: List[Tuple[ClientProxy, EvaluateIns]]
+        client_instructions: List[Tuple[ClientProxy, EvaluateIns]]
 ) -> EvaluateResultsAndFailures:
     """Evaluate parameters concurrently on all selected clients."""
+    # print('server eval client   sssssss')
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(evaluate_client, c, ins) for c, ins in client_instructions
@@ -373,137 +547,136 @@ def evaluate_clients(
 
 
 def evaluate_client(
-    client: ClientProxy, ins: EvaluateIns
+        client: ClientProxy, ins: EvaluateIns
 ) -> Tuple[ClientProxy, EvaluateRes]:
     """Evaluate parameters on a single client."""
+    # print('server eval client')
     evaluate_res = client.evaluate(ins)
     return client, evaluate_res
 
-
-#Async里最主要的function，收到一个client的parameter直接更新并让这个client
-#拿着新的parameter继续训练，不需要等其它clients
-
-
-def async_fit_rounds(
-        self,
-        history: History,
-        num_rounds: int,
-        start_time
-) -> History:
-    """Perform asynchronous federated optimization."""
-    # Run federated learning for num_rounds
-    log(INFO, "FedAsync starting")
-
-    # 刚开始让所有的clients都加入training
-    client_instructions = self.strategy.configure_fit(
-        rnd=self.current_round, parameters=self.parameters, client_manager=self._client_manager
-    )
-    if not client_instructions:
-        log(INFO, "fit_round: no clients selected, cancel")
-        return None
-    log(
-        DEBUG,
-        "fit_round: strategy sampled %s clients (out of %s)",
-        len(client_instructions),
-        self._client_manager.num_available(),
-    )
-
-    # Collect `fit` results from the queue
-    # 创建一个queue，当一个client完成返回后，加入队列
-    # 每次server从队列当中拿出一个，收完他的parameter后，更新global的parameter
-    # server直接让这个client基于新的parameter继续下去训练，不需要等其它人
-    flag = True
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=100)
-    [executor.submit(fit_client, c, ins) for c, ins in client_instructions]
-    while flag:
-        if not queue.empty():
-            results: List[Tuple[ClientProxy, FitRes]] = []
-            result = queue.get()
-            results.append(result)
-            self.current_round += 1
-
-            # Aggregate training results
-            aggregated_result: Union[
-                Tuple[Optional[Parameters], Dict[str, Scalar]],
-                Optional[Weights],  # Deprecated
-            ] = self.strategy.weighted_aggregate_fit(rnd=self.current_round,
-                                                     gl_parameters=self.parameters,
-                                                     results=results)
-
-            if aggregated_result is not None:
-                parameters_aggregated, metrics_aggregated = aggregated_result
-                self.parameters = parameters_aggregated
-            # strategy 要新加的function，直接返回当前的(client, FitIns)的tuple
-            client_instructions = self.strategy.configure_fit_one(
-                rnd=self.current_round, parameters=self.parameters, client=result[0]
-            )
-            executor.submit(fit_client, client_instructions[0], client_instructions[1])
-
-            # Evaluate model using strategy implementation
-            if self.current_round % 10 == 0:
-                res_cen = self.strategy.evaluate(parameters=self.parameters)
-                if res_cen is not None:
-                    loss_cen, metrics_cen = res_cen
-                    log(
-                        INFO,
-                        "fit progress: (%s, %s, %s, %s)",
-                        int(self.current_round / 10),
-                        loss_cen,
-                        metrics_cen,
-                        timeit.default_timer() - start_time,
-                    )
-                    history.add_loss_centralized(rnd=self.current_round, loss=loss_cen)
-                    history.add_metrics_centralized(rnd=self.current_round, metrics=metrics_cen)
-
-                    # local evaluation
-                    # self.evaluate_round(rnd=self.current_round)
-
-        if self.current_round == num_rounds:
-            flag = False
-
-    # Bookkeeping
-    end_time = timeit.default_timer()
-    elapsed = end_time - start_time
-    log(INFO, "FL finished in %s", elapsed)
-    return history
+# Async里最主要的function，收到一个client的parameter直接更新并让这个client
+# 拿着新的parameter继续训练，不需要等其它clients
 
 
-#FedAsync
-#strategy:
+# def async_fit_rounds(
+#         self,
+#         history: History,
+#         num_rounds: int,
+#         start_time
+# ) -> History:
+#     """Perform asynchronous federated optimization."""
+#     # Run federated learning for num_rounds
+#     log(INFO, "FedAsync starting")
+#
+#     # 刚开始让所有的clients都加入training
+#     client_instructions = self.strategy.configure_fit(
+#         rnd=self.current_round, parameters=self.parameters, client_manager=self._client_manager
+#     )
+#     if not client_instructions:
+#         log(INFO, "fit_round: no clients selected, cancel")
+#         return None
+#     log(
+#         DEBUG,
+#         "fit_round: strategy sampled %s clients (out of %s)",
+#         len(client_instructions),
+#         self._client_manager.num_available(),
+#     )
+#
+#     # Collect `fit` results from the queue
+#     # 创建一个queue，当一个client完成返回后，加入队列
+#     # 每次server从队列当中拿出一个，收完他的parameter后，更新global的parameter
+#     # server直接让这个client基于新的parameter继续下去训练，不需要等其它人
+#     flag = True
+#     executor = concurrent.futures.ThreadPoolExecutor(max_workers=100)
+#     [executor.submit(fit_client, c, ins) for c, ins in client_instructions]
+#     while flag:
+#         if not queue.empty():
+#             results: List[Tuple[ClientProxy, FitRes]] = []
+#             result = queue.get()
+#             results.append(result)
+#             self.current_round += 1
+#
+#             # Aggregate training results
+#             aggregated_result: Union[
+#                 Tuple[Optional[Parameters], Dict[str, Scalar]],
+#                 Optional[Weights],  # Deprecated
+#             ] = self.strategy.weighted_aggregate_fit(rnd=self.current_round,
+#                                                      gl_parameters=self.parameters,
+#                                                      results=results)
+#
+#             if aggregated_result is not None:
+#                 parameters_aggregated, metrics_aggregated = aggregated_result
+#                 self.parameters = parameters_aggregated
+#             # strategy 要新加的function，直接返回当前的(client, FitIns)的tuple
+#             client_instructions = self.strategy.configure_fit_one(
+#                 rnd=self.current_round, parameters=self.parameters, client=result[0]
+#             )
+#             executor.submit(fit_client, client_instructions[0], client_instructions[1])
+#
+#             # Evaluate model using strategy implementation
+#             if self.current_round % 10 == 0:
+#                 res_cen = self.strategy.evaluate(parameters=self.parameters)
+#                 if res_cen is not None:
+#                     loss_cen, metrics_cen = res_cen
+#                     log(
+#                         INFO,
+#                         "fit progress: (%s, %s, %s, %s)",
+#                         int(self.current_round / 10),
+#                         loss_cen,
+#                         metrics_cen,
+#                         timeit.default_timer() - start_time,
+#                     )
+#                     history.add_loss_centralized(rnd=self.current_round, loss=loss_cen)
+#                     history.add_metrics_centralized(rnd=self.current_round, metrics=metrics_cen)
+#
+#                     # local evaluation
+#                     # self.evaluate_round(rnd=self.current_round)
+#
+#         if self.current_round == num_rounds:
+#             flag = False
+#
+#     # Bookkeeping
+#     end_time = timeit.default_timer()
+#     elapsed = end_time - start_time
+#     log(INFO, "FL finished in %s", elapsed)
+#     return history
 
 
-def configure_fit_one(
-        self, rnd: int, parameters: Parameters, client: ClientProxy
-) -> Tuple[ClientProxy, FitIns]:
-    """Configure the next round of training."""
-    config = {}
-    config = {}
-    global_round = rnd
-    if self.on_fit_config_fn is not None:
-        # Custom fit config function provided
-        config = self.on_fit_config_fn(rnd)
-    fit_ins = FitIns(parameters, config)
-    return client, fit_ins
+# FedAsync
+# strategy:
 
 
-#Aggregation:
+# def configure_fit_one(
+#         self, rnd: int, parameters: Parameters, client: ClientProxy
+# ) -> Tuple[ClientProxy, FitIns]:
+#     """Configure the next round of training."""
+#     config = {}
+#     config = {}
+#     global_round = rnd
+#     if self.on_fit_config_fn is not None:
+#         # Custom fit config function provided
+#         config = self.on_fit_config_fn(rnd)
+#     fit_ins = FitIns(parameters, config)
+#     return client, fit_ins
 
 
-def aggregate_async(
-        gl_weights: Weights, results: List[Tuple[Weights, int]], alpha: float
-) -> Weights:
-    """Update global model by weighted aggregation"""
-
-    for weights, progress in results:
-        c_weights = weights
-
-    c_weights_a = [each * alpha for each in c_weights]
-    gl_weights_a = [each * (1 - alpha) for each in gl_weights]
-
-    """ w_g(t) = (1-alpha)* w_g(t-1) + alpha * w_k(t-1)"""
-    weights_prime: Weights = [
-        reduce(np.add, layer_updates)
-        for layer_updates in zip(gl_weights_a, c_weights_a)
-    ]
-    return weights_prime
-
+# # Aggregation:
+#
+#
+# def aggregate_async(
+#         gl_weights: Weights, results: List[Tuple[Weights, int]], alpha: float
+# ) -> Weights:
+#     """Update global model by weighted aggregation"""
+#
+#     for weights, progress in results:
+#         c_weights = weights
+#
+#     c_weights_a = [each * alpha for each in c_weights]
+#     gl_weights_a = [each * (1 - alpha) for each in gl_weights]
+#
+#     """ w_g(t) = (1-alpha)* w_g(t-1) + alpha * w_k(t-1)"""
+#     weights_prime: Weights = [
+#         reduce(np.add, layer_updates)
+#         for layer_updates in zip(gl_weights_a, c_weights_a)
+#     ]
+#     return weights_prime

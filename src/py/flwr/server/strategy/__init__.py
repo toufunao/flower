@@ -28,6 +28,7 @@ from .fedyogi import FedYogi as FedYogi
 from .qfedavg import QFedAvg as QFedAvg
 from .qfedavg import QffedAvg as QffedAvg  # Deprecated
 from .strategy import Strategy as Strategy
+from .fedasync import FedAsync as FedAsync
 
 __all__ = [
     "DefaultStrategy",
@@ -43,4 +44,5 @@ __all__ = [
     "QFedAvg",
     "QffedAvg",  # Deprecated
     "Strategy",
+    "FedAsync",
 ]
