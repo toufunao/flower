@@ -433,3 +433,6 @@ class PytorchMNISTClient(fl.client.Client):
             num_examples=num_examples_test,
             accuracy=float(accuracy),
         )
+
+    def get_properties(self, ins):
+        pass
