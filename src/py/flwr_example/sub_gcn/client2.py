@@ -189,6 +189,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     fl.client.start_numpy_client(args.server_address, client=GCNClient())
     with open(f'log/client2_{args.n}.log', mode='a', encoding='utf-8') as f:
-        for item in log_info:
-            f.write(str(item[0]) + '     ' + str(item[1]) + '\n')
+        for i in range(log_info):
+            item = log_info[i]
+            f.write(str(i) + "," + str(item[0]) + ","+ str(item[1]) + '\n')
     print(f'training completed')
