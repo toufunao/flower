@@ -1,7 +1,7 @@
 import flwr as fl
 from argparse import ArgumentParser
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = ArgumentParser(description="GCN Server")
     parser.add_argument(
         "--server_address",
@@ -50,17 +50,31 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    strategy = fl.server.strategy.FedAvg(
+    strategy = fl.server.strategy.FedAsync(
         fraction_fit=args.fraction_fit,
         fraction_eval=args.fraction_eval,
         min_fit_clients=args.min_fit_clients,
         min_eval_clients=args.min_eval_clients,
         min_available_clients=args.min_available_clients
     )
+    client_manager = fl.server.client_manager.SimpleClientManager()
+    server = fl.server.AsyncServer(client_manager, strategy)
 
     # Start server
     fl.server.start_server(
         server_address="[::]:8080",
         config={"num_rounds": args.rounds},
-        strategy=strategy,
+        server=server,
     )
+    # strategy = fl.server.strategy.FedAsync(
+    #     fraction_fit=0.5,
+    #     fraction_eval=0.5,
+    # )
+    # client_manager = fl.server.client_manager.SimpleClientManager()
+    # server = fl.server.AsyncServer(client_manager, strategy)
+    # # Start server
+    # fl.server.start_server(
+    #     server_address="[::]:8080",
+    #     config={"num_rounds": 3},
+    #     server=server,
+    # )

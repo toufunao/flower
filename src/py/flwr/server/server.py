@@ -195,7 +195,7 @@ class Server:
         Tuple[Optional[float], Dict[str, Scalar], EvaluateResultsAndFailures]
     ]:
         """Validate current global model on a number of clients."""
-        print('server evaluate_round')
+        # print('server evaluate_round')
 
         # Get clients and their respective instructions from strategy
         client_instructions = self.strategy.configure_evaluate(
