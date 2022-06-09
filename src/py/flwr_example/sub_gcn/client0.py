@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     if not os.path.exists('log/'):
         os.mkdir('log/')
-    with open(f'log/client0_{args.n}.log', mode='a', encoding='utf-8') as f:
+    with open(f'log/client0_{args.n}.log', mode='w', encoding='utf-8') as f:
         for i in range(log_info):
             item = log_info[i]
             f.write(str(i) + "," + str(item[0]) + "," + str(item[1]) + '\n')
