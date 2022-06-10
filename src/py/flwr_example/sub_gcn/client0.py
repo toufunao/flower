@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import scipy.sparse as sp
 import torch
@@ -164,6 +166,7 @@ class GCNClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         self.set_parameters(parameters)
         train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask)
+        print(time.time())
         return self.get_parameters(), len(train_mask), {}
 
     def evaluate(self, parameters, config):
@@ -195,7 +198,7 @@ if __name__ == "__main__":
     if not os.path.exists('log/'):
         os.mkdir('log/')
     with open(f'log/client0_{args.n}.log', mode='w', encoding='utf-8') as f:
-        for i in range(log_info):
+        for i in range(len(log_info)):
             item = log_info[i]
             f.write(str(i) + "," + str(item[0]) + "," + str(item[1]) + '\n')
     print(f'training completed')

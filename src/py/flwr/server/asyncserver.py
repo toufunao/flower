@@ -88,7 +88,7 @@ class AsyncServer:
             tensors=[], tensor_type="numpy.ndarray"
         )
         self.strategy: Strategy = strategy if strategy is not None else FedAsync()
-        self.current_round = 0
+        self.current_round = 1
 
     def set_strategy(self, strategy: Strategy) -> None:
         """Replace server strategy."""
@@ -245,7 +245,7 @@ class AsyncServer:
                     history.add_metrics_centralized(rnd=self.current_round, metrics=metrics_cen)
 
                     # local evaluation
-                if self.current_round % 10 == 0:
+                if self.current_round % 10 == 0 or self.current_round == num_rounds:
                     print(future.exception())
                     res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
                     if res_fed:
@@ -517,7 +517,7 @@ def fit_client(client: ClientProxy, ins: FitIns) -> Tuple[ClientProxy, FitRes]:
     # print('server fit client')
     fit_res = client.fit(ins)
     queue.put((client, fit_res))
-    # print(f'queue size {queue.qsize()}')
+    print(f'queue size {queue.qsize()}')
     return client, fit_res
 
 
