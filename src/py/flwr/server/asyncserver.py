@@ -517,7 +517,7 @@ def fit_client(client: ClientProxy, ins: FitIns) -> Tuple[ClientProxy, FitRes]:
     # print('server fit client')
     fit_res = client.fit(ins)
     queue.put((client, fit_res))
-    print(f'queue size {queue.qsize()}')
+    # print(f'queue size {queue.qsize()}')
     return client, fit_res
 
 
