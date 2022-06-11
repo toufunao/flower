@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--min_eval_clients",
         type=int,
-        default=2,
+        default=5,
         help=f"Minimum number of clients used during validation. Defaults to 2.",
     )
 

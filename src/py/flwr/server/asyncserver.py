@@ -247,7 +247,8 @@ class AsyncServer:
                     # local evaluation
                 if self.current_round % 10 == 0 or self.current_round == num_rounds:
                     print(future.exception())
-                    res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
+                    # res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
+                    res_fed = self.evaluate_round(rnd=self.current_round)
                     if res_fed:
                         loss_fed, evaluate_metrics_fed, _ = res_fed
                         if loss_fed:
