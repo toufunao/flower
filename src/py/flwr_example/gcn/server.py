@@ -1,5 +1,39 @@
 import flwr as fl
 from argparse import ArgumentParser
+from client_init import *
+from typing import Callable, Dict, List, Optional, Tuple
+
+
+def get_eval_fn() -> Callable[[fl.common.Weights], Optional[Tuple[float, float]]]:
+    """Return an evaluation function for centralized evaluation."""
+
+    # pylint: disable=no-member
+
+    # pylint: enable=no-member
+
+    def evaluate(weights: fl.common.Weights) -> Optional[Tuple[float, float]]:
+        """Use the entire CIFAR-10 test set for evaluation."""
+        set_parameters(weights)
+        return model_test(model, tensor_val_mask)
+
+    return evaluate
+
+
+def set_parameters(parameters):
+    params_dict = zip(model.state_dict().keys(), parameters)
+    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+    model.load_state_dict(state_dict, strict=True)
+
+
+def fit_config(rnd: int) -> Dict[str, fl.common.Scalar]:
+    """Return a configuration with static batch size and (local) epochs."""
+    config: Dict[str, fl.common.Scalar] = {
+        "epoch_global": str(rnd),
+        "epochs": str(5),
+        "batch_size": str(128),
+    }
+    return config
+
 
 if __name__ == '__main__':
     parser = ArgumentParser(description="GCN Server")
@@ -47,7 +81,8 @@ if __name__ == '__main__':
         fraction_fit=args.fraction_fit,
         fraction_eval=args.fraction_eval,
         min_fit_clients=args.min_fit_clients,
-        min_eval_clients=args.min_eval_clients
+        min_eval_clients=args.min_eval_clients,
+        eval_fn=get_eval_fn(),
     )
 
     # Start server

@@ -280,6 +280,7 @@ class FedAsync(Strategy):
     def weighted_aggregate_fit(
             self,
             rnd: int,
+            alpha,
             gl_parameters: Parameters,
             results: List[Tuple[ClientProxy, FitRes]],
             failures: List[BaseException],
@@ -297,7 +298,6 @@ class FedAsync(Strategy):
         ]
         gl_weights = parameters_to_weights(gl_parameters)
         # todo: weighted aggregated function
-        alpha = 0.5
         res = weights_to_parameters(aggregate_async(gl_weights, weights_results, alpha))
         return res, {}
 

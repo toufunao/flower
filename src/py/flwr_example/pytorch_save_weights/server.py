@@ -24,7 +24,7 @@ import torchvision
 
 import flwr as fl
 
-from . import cifar
+import cifar
 
 
 class SaveModelStrategy(fl.server.strategy.FedAvg):

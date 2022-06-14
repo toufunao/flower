@@ -77,10 +77,10 @@ queue = queue.Queue()
 
 
 class AsyncServer:
-    """Flower server."""
+    """Flower async_server."""
 
     def __init__(
-            self, client_manager: ClientManager, strategy: Optional[Strategy] = None
+            self, client_manager: ClientManager, strategy: Optional[Strategy] = None, alpha=0.5,
     ) -> None:
         # print('server init')
         self._client_manager: ClientManager = client_manager
@@ -88,7 +88,8 @@ class AsyncServer:
             tensors=[], tensor_type="numpy.ndarray"
         )
         self.strategy: Strategy = strategy if strategy is not None else FedAsync()
-        self.current_round = 0
+        self.current_round = -1
+        self.alpha = alpha
 
     def set_strategy(self, strategy: Strategy) -> None:
         """Replace server strategy."""
@@ -212,7 +213,7 @@ class AsyncServer:
                 aggregated_result: Union[
                     Tuple[Optional[Parameters], Dict[str, Scalar]],
                     Optional[Weights],  # Deprecated
-                ] = self.strategy.weighted_aggregate_fit(rnd=self.current_round,
+                ] = self.strategy.weighted_aggregate_fit(rnd=self.current_round, alpha=self.alpha,
                                                          gl_parameters=self.parameters,
                                                          results=results, failures=[])
 
@@ -230,19 +231,20 @@ class AsyncServer:
                 # print(time.time() - s)
                 # Evaluate model using strategy implementation
                 # if self.current_round % 10 == 0:
-                res_cen = self.strategy.evaluate(parameters=self.parameters)
-                if res_cen is not None:
-                    loss_cen, metrics_cen = res_cen
-                    log(
-                        INFO,
-                        "fit progress: (%s, %s, %s, %s)",
-                        int(self.current_round / 10),
-                        loss_cen,
-                        metrics_cen,
-                        timeit.default_timer() - start_time,
-                    )
-                    history.add_loss_centralized(rnd=self.current_round, loss=loss_cen)
-                    history.add_metrics_centralized(rnd=self.current_round, metrics=metrics_cen)
+                if self.current_round % 10 == 0 or self.current_round == num_rounds:
+                    res_cen = self.strategy.evaluate(parameters=self.parameters)
+                    if res_cen is not None:
+                        loss_cen, metrics_cen = res_cen
+                        log(
+                            INFO,
+                            "fit progress: (%s, %s, %s, %s)",
+                            int(self.current_round / 10),
+                            loss_cen,
+                            metrics_cen,
+                            timeit.default_timer() - start_time,
+                        )
+                        history.add_loss_centralized(rnd=int(self.current_round / 10), loss=loss_cen)
+                        history.add_metrics_centralized(rnd=int(self.current_round / 10), metrics=metrics_cen)
 
                     # local evaluation
                 if self.current_round == 1 or self.current_round % 10 == 0 or self.current_round == num_rounds:

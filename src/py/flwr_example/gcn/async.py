@@ -1,6 +1,6 @@
 import flwr as fl
 from argparse import ArgumentParser
-from client import *
+from client_init import *
 from typing import Callable, Dict, List, Optional, Tuple
 
 
@@ -58,20 +58,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--min_fit_clients",
         type=int,
-        default=5,
+        default=2,
         help=f"Minimum number of clients used during training. Defaults to 2.",
     )
     parser.add_argument(
         "--min_eval_clients",
         type=int,
-        default=5,
+        default=2,
         help=f"Minimum number of clients used during validation. Defaults to 2.",
     )
 
     parser.add_argument(
         "--min_available_clients",
         type=int,
-        default=5,
+        default=2,
         help=f"Minimum number of total clients in the system.Defaults to 5.",
     )
 

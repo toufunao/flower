@@ -162,6 +162,7 @@ class Server:
             # Evaluate model on a sample of available clients
             # if current_round == 1 or current_round % 10 == 0:
             res_fed = self.evaluate_round(rnd=current_round)
+            print(res_fed)
             if res_fed:
                 loss_fed, evaluate_metrics_fed, _ = res_fed
                 if loss_fed:
