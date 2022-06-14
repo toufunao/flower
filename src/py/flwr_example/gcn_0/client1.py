@@ -192,8 +192,10 @@ if __name__ == "__main__":
 
     if not os.path.exists('log/'):
         os.mkdir('log/')
-    with open(f'log/client1_{args.n}.log', mode='w', encoding='utf-8') as f:
+    with open(f'log/client0_{args.n}.log', mode='w', encoding='utf-8') as f:
+        f.write("[ ")
         for i in range(len(log_info)):
             item = log_info[i]
-            f.write(str(i) + "," + str(item[0]) + "," + str(item[1]) + '\n')
+            f.write(" (" + str(i) + "," + str(item[0]) + "," + str(item[1]) + "),")
+        f.write("]")
     print(f'training completed')
