@@ -88,7 +88,7 @@ class AsyncServer:
             tensors=[], tensor_type="numpy.ndarray"
         )
         self.strategy: Strategy = strategy if strategy is not None else FedAsync()
-        self.current_round = -1
+        self.current_round = 0
         self.alpha = alpha
 
     def set_strategy(self, strategy: Strategy) -> None:
