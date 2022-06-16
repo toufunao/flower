@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--alpha",
         type=float,
-        default=0.4,
+        default=0.5,
         help=f"Adaptive alpha. Default to 0.5.",
     )
 

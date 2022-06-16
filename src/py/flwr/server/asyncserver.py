@@ -254,9 +254,9 @@ class AsyncServer:
                     if res_fed:
                         loss_fed, evaluate_metrics_fed, _ = res_fed
                         if loss_fed:
-                            history.add_loss_distributed(rnd=self.current_round, loss=loss_fed)
+                            history.add_loss_distributed(rnd=int(self.current_round / 10), loss=loss_fed)
                             history.add_metrics_distributed(
-                                rnd=self.current_round, metrics=evaluate_metrics_fed
+                                rnd=int(self.current_round / 10), metrics=evaluate_metrics_fed
                             )
                 # print(future.exception())
 
