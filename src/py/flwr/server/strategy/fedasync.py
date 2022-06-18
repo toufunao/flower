@@ -16,7 +16,7 @@ from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 
-from .aggregate import aggregate, weighted_loss_avg, aggregate_async
+from .aggregate import aggregate, weighted_loss_avg, aggregate_async, weighted_acc_avg
 from .strategy import Strategy
 
 DEPRECATION_WARNING = """
@@ -324,4 +324,16 @@ class FedAsync(Strategy):
                 for _, evaluate_res in results
             ]
         )
-        return loss_aggregated, {}
+        res = [
+            (
+                evaluate_res.num_examples,
+                evaluate_res.loss,
+                evaluate_res.accuracy,
+                evaluate_res.metrics,
+            )
+            for _, evaluate_res in results
+        ]
+        acc_aggregated = weighted_acc_avg(res, len(results))
+
+        # return loss_aggregated, {}
+        return loss_aggregated, {'accuracy': acc_aggregated}

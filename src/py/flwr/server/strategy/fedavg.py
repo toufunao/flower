@@ -17,7 +17,6 @@
 Paper: https://arxiv.org/abs/1602.05629
 """
 
-
 from logging import WARNING
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -36,7 +35,7 @@ from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 
-from .aggregate import aggregate, weighted_loss_avg
+from .aggregate import aggregate, weighted_loss_avg, weighted_acc_avg
 from .strategy import Strategy
 
 DEPRECATION_WARNING = """
@@ -81,19 +80,19 @@ class FedAvg(Strategy):
 
     # pylint: disable=too-many-arguments,too-many-instance-attributes
     def __init__(
-        self,
-        fraction_fit: float = 0.1,
-        fraction_eval: float = 0.1,
-        min_fit_clients: int = 2,
-        min_eval_clients: int = 2,
-        min_available_clients: int = 2,
-        eval_fn: Optional[
-            Callable[[Weights], Optional[Tuple[float, Dict[str, Scalar]]]]
-        ] = None,
-        on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
-        on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
-        accept_failures: bool = True,
-        initial_parameters: Optional[Parameters] = None,
+            self,
+            fraction_fit: float = 0.1,
+            fraction_eval: float = 0.1,
+            min_fit_clients: int = 2,
+            min_eval_clients: int = 2,
+            min_available_clients: int = 2,
+            eval_fn: Optional[
+                Callable[[Weights], Optional[Tuple[float, Dict[str, Scalar]]]]
+            ] = None,
+            on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+            on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+            accept_failures: bool = True,
+            initial_parameters: Optional[Parameters] = None,
     ) -> None:
         """Federated Averaging strategy.
 
@@ -126,8 +125,8 @@ class FedAvg(Strategy):
         # print('avg init')
 
         if (
-            min_fit_clients > min_available_clients
-            or min_eval_clients > min_available_clients
+                min_fit_clients > min_available_clients
+                or min_eval_clients > min_available_clients
         ):
             log(WARNING, WARNING_MIN_AVAILABLE_CLIENTS_TOO_LOW)
 
@@ -160,7 +159,7 @@ class FedAvg(Strategy):
         return max(num_clients, self.min_eval_clients), self.min_available_clients
 
     def initialize_parameters(
-        self, client_manager: ClientManager
+            self, client_manager: ClientManager
     ) -> Optional[Parameters]:
         """Initialize global model parameters."""
         # print('avg init params')
@@ -172,7 +171,7 @@ class FedAvg(Strategy):
         return initial_parameters
 
     def evaluate(
-        self, parameters: Parameters
+            self, parameters: Parameters
     ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
         """Evaluate model parameters using an evaluation function."""
         # print('avg evaluate')
@@ -192,7 +191,7 @@ class FedAvg(Strategy):
         return loss, metrics
 
     def configure_fit(
-        self, rnd: int, parameters: Parameters, client_manager: ClientManager
+            self, rnd: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
         # print('avg config_fit')
@@ -214,7 +213,7 @@ class FedAvg(Strategy):
         return [(client, fit_ins) for client in clients]
 
     def configure_evaluate(
-        self, rnd: int, parameters: Parameters, client_manager: ClientManager
+            self, rnd: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, EvaluateIns]]:
         """Configure the next round of evaluation."""
         # print('avg config eval')
@@ -245,10 +244,10 @@ class FedAvg(Strategy):
         return [(client, evaluate_ins) for client in clients]
 
     def aggregate_fit(
-        self,
-        rnd: int,
-        results: List[Tuple[ClientProxy, FitRes]],
-        failures: List[BaseException],
+            self,
+            rnd: int,
+            results: List[Tuple[ClientProxy, FitRes]],
+            failures: List[BaseException],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         """Aggregate fit results using weighted average."""
         # print('avg agg_fit')
@@ -265,10 +264,10 @@ class FedAvg(Strategy):
         return weights_to_parameters(aggregate(weights_results)), {}
 
     def aggregate_evaluate(
-        self,
-        rnd: int,
-        results: List[Tuple[ClientProxy, EvaluateRes]],
-        failures: List[BaseException],
+            self,
+            rnd: int,
+            results: List[Tuple[ClientProxy, EvaluateRes]],
+            failures: List[BaseException],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
         """Aggregate evaluation losses using weighted average."""
         # print('avg agg_eval')
@@ -287,4 +286,17 @@ class FedAvg(Strategy):
                 for _, evaluate_res in results
             ]
         )
-        return loss_aggregated, {}
+        res = [
+            (
+                evaluate_res.num_examples,
+                evaluate_res.loss,
+                evaluate_res.accuracy,
+                evaluate_res.metrics,
+            )
+            for _, evaluate_res in results
+        ]
+        acc_aggregated = weighted_acc_avg(res, len(results))
+
+        # return loss_aggregated, {}
+        return loss_aggregated, {'accuracy': acc_aggregated}
+        # return loss_aggregated, {}

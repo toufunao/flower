@@ -384,6 +384,7 @@ class AsyncServer:
             Tuple[Optional[float], Dict[str, Scalar]],
             Optional[float],  # Deprecated
         ] = self.strategy.aggregate_evaluate(rnd, results, failures)
+        # print('agg', aggregated_result)
 
         metrics_aggregated: Dict[str, Scalar] = {}
         if aggregated_result is None:

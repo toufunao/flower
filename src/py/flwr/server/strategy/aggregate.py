@@ -68,6 +68,15 @@ def weighted_loss_avg(results: List[Tuple[int, float, Optional[float]]]) -> floa
     return sum(weighted_losses) / num_total_evaluation_examples
 
 
+def weighted_acc_avg(results, number) -> float:
+    """Aggregate evaluation results obtained from multiple clients."""
+    # print(number)
+    # for _, _, _, metrics in results:
+    #     print(metrics['accuracy'])
+    weighted_acces = [metrics['accuracy'] for num_examples, _, _, metrics in results]
+    return sum(weighted_acces) / number
+
+
 def aggregate_qffl(
         weights: Weights, deltas: List[Weights], hs_fll: List[Weights]
 ) -> Weights:
