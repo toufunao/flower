@@ -92,8 +92,8 @@ enc1 = Encoder(features, 1433, 128, adj_lists, agg1, gcn=True, cuda=False)
 agg2 = MeanAggregator(lambda nodes: enc1(nodes).t(), cuda=False)
 enc2 = Encoder(lambda nodes: enc1(nodes).t(), enc1.embed_dim, 128, adj_lists, agg2,
                base_model=enc1, gcn=True, cuda=False)
-enc1.num_samples = 5
-enc2.num_samples = 5
+enc1.num_samples = 4
+enc2.num_samples = 4
 
 graphsage = SupervisedGraphSage(7, enc2)
 #    graphsage.cuda()
