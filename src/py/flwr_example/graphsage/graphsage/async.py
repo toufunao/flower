@@ -64,7 +64,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--rounds",
         type=int,
-        default=100,
+        default=10,
         help=f"Total training round. Default to 3.",
     )
 
@@ -73,6 +73,13 @@ if __name__ == "__main__":
         type=float,
         default=0.5,
         help=f"Adaptive alpha. Default to 0.5.",
+    )
+
+    parser.add_argument(
+        "--flag",
+        type=int,
+        default=0,
+        help=f"Flag . Default to 0.",
     )
 
     args = parser.parse_args()
@@ -86,7 +93,8 @@ if __name__ == "__main__":
         # eval_fn=get_eval_fn(),
     )
     client_manager = fl.server.client_manager.SimpleClientManager()
-    server = fl.server.AsyncServer(client_manager, strategy, alpha=args.alpha)
+    print(args.flag)
+    server = fl.server.AsyncServer(client_manager, strategy, alpha=args.alpha, flag=True if args.flag == 0 else False)
 
     # Start server
     fl.server.start_server(

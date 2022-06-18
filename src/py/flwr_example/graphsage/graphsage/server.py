@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--fraction_fit",
         type=float,
-        default=0.2,
+        default=0.1,
         help=f"Fraction of clients used during training. Defaults to 0.1.",
     )
     parser.add_argument(
@@ -50,14 +50,14 @@ if __name__ == '__main__':
     parser.add_argument(
         "--min_eval_clients",
         type=int,
-        default=2,
+        default=5,
         help=f"Minimum number of clients used during validation. Defaults to 2.",
     )
 
     parser.add_argument(
         "--min_available_clients",
         type=int,
-        default=2,
+        default=5,
         help=f"Minimum number of total clients in the system.Defaults to 5.",
     )
 

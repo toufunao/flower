@@ -80,7 +80,7 @@ class AsyncServer:
     """Flower async_server."""
 
     def __init__(
-            self, client_manager: ClientManager, strategy: Optional[Strategy] = None, alpha=0.5,
+            self, client_manager: ClientManager, strategy: Optional[Strategy] = None, alpha=0.5, flag=True,
     ) -> None:
         # print('server init')
         self._client_manager: ClientManager = client_manager
@@ -90,6 +90,7 @@ class AsyncServer:
         self.strategy: Strategy = strategy if strategy is not None else FedAsync()
         self.current_round = 0
         self.alpha = alpha
+        self.flag = flag
 
     def set_strategy(self, strategy: Strategy) -> None:
         """Replace server strategy."""
@@ -247,7 +248,7 @@ class AsyncServer:
                         history.add_metrics_centralized(rnd=int(self.current_round / 10), metrics=metrics_cen)
 
                     # local evaluation
-                if self.current_round == 1 or self.current_round % 10 == 0 or self.current_round == num_rounds:
+                if not self.flag:
                     print(future.exception())
                     # res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
                     res_fed = self.evaluate_round(rnd=self.current_round)
@@ -258,6 +259,18 @@ class AsyncServer:
                             history.add_metrics_distributed(
                                 rnd=int(self.current_round / 10), metrics=evaluate_metrics_fed
                             )
+                else:
+                    if self.current_round == 1 or self.current_round % 10 == 0 or self.current_round == num_rounds:
+                        print(future.exception())
+                        # res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
+                        res_fed = self.evaluate_round(rnd=self.current_round)
+                        if res_fed:
+                            loss_fed, evaluate_metrics_fed, _ = res_fed
+                            if loss_fed:
+                                history.add_loss_distributed(rnd=int(self.current_round / 10), loss=loss_fed)
+                                history.add_metrics_distributed(
+                                    rnd=int(self.current_round / 10), metrics=evaluate_metrics_fed
+                                )
                 # print(future.exception())
 
             # print('num rounds', str(num_rounds))
