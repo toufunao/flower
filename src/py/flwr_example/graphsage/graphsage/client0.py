@@ -121,6 +121,7 @@ def f_test(graphsage, val, labels):
     loss = graphsage.loss(batch_nodes, Variable(torch.LongTensor(labels[np.array(batch_nodes)])))
     acc = accuracy_score(labels[val], val_output.data.numpy().argmax(axis=1))
     print('测试', loss.data.item(), float(acc))
+    log_info.append((loss.data.item(), acc))
     return loss.data.item(), acc
 
 
