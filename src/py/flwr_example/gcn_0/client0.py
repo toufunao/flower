@@ -10,6 +10,7 @@ from load_cora import *
 import sys
 import flwr as fl
 from collections import OrderedDict
+import time
 
 sys.path.append("cora")
 log_info = []
@@ -152,6 +153,8 @@ class GCNClient(fl.client.NumPyClient):
         pass
 
     def get_parameters(self):
+        # for _, val in model.state_dict().items():
+        #     print(val.cpu().numpy().size)
         return [val.cpu().numpy() for _, val in model.state_dict().items()]
 
     def set_parameters(self, parameters):
@@ -161,12 +164,19 @@ class GCNClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
+        t = time.time()
         train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask)
+        # print('fit : ', time.time() - t)
+        # print(self.get_parameters()[0].shape)
+        # print(len(self.get_parameters()))
+        # print(len(self.get_parameters()) * self.get_parameters()[0].shape[0] * self.get_parameters()[0].shape[1])
         return self.get_parameters(), len(train_mask), {}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
+        t = time.time()
         loss, accuracy = test(model, tensor_val_mask)
+        print('eval', time.time() - t)
         return loss, len(test_mask), {"accuracy": float(accuracy)}
 
 

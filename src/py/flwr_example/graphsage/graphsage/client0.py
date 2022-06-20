@@ -127,7 +127,7 @@ def f_test(graphsage, val, labels):
 
 class SageClient(fl.client.NumPyClient):
     def get_parameters(self):
-        # print("参数size:",[val.cpu().numpy() for _, val in graphsage.state_dict().items()])
+        # print("参数size:", [val.cpu().numpy() for _, val in graphsage.state_dict().items()])
         return [val.cpu().numpy() for _, val in graphsage.state_dict().items()]
 
     def get_properties(self, config):
@@ -140,12 +140,18 @@ class SageClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
+        # t = time.time()
         f_train(graphsage, train, labels)
+        # print(time.time() - t)
+        # print(self.get_parameters()[0].shape)
+        # print(len(self.get_parameters()) * self.get_parameters()[0].shape[0] * self.get_parameters()[0].shape[1])
         return self.get_parameters(), len(train), {}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
+        # t = time.time()
         loss, accuracy = f_test(graphsage, test, labels)
+        # print('eval', time.time() - t)
 
         return loss, len(test), {"accuracy": float(accuracy)}
 
