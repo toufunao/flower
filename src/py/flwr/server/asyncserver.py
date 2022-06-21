@@ -75,6 +75,7 @@ ReconnectResultsAndFailures = Tuple[
 
 queue = queue.Queue()
 round_time = []
+eval_time = []
 
 
 class AsyncServer:
@@ -280,7 +281,11 @@ class AsyncServer:
                 total = 0
                 for item in round_time:
                     total += item
-                print('total time used in transmitting', total / len(round_time))
+                print('total time used in fit transmitting ', total)
+                total = 0
+                for item in eval_time:
+                    total += item
+                print('total time used in eval transmitting ', total)
 
         # Bookkeeping
         end_time = timeit.default_timer()
@@ -540,7 +545,7 @@ def fit_client(client: ClientProxy, ins: FitIns) -> Tuple[ClientProxy, FitRes]:
     t = time.time()
     fit_res = client.fit(ins)
     t = time.time() - t
-    round_time.append(t)
+    round_time.append(t - fit_res.metrics['fit_time'])
     queue.put((client, fit_res))
     # print(f'queue size {queue.qsize()}')
     return client, fit_res
@@ -576,7 +581,10 @@ def evaluate_client(
 ) -> Tuple[ClientProxy, EvaluateRes]:
     """Evaluate parameters on a single client."""
     # print('server eval client')
+    t = time.time()
     evaluate_res = client.evaluate(ins)
+    t = time.time() - t
+    eval_time.append(t - evaluate_res.metrics['eval_time'])
     return client, evaluate_res
 
 # Async里最主要的function，收到一个client的parameter直接更新并让这个client

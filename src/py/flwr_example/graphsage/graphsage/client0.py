@@ -150,11 +150,10 @@ class SageClient(fl.client.NumPyClient):
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        # t = time.time()
+        t = time.time()
         loss, accuracy = f_test(graphsage, test, labels)
-        # print('eval', time.time() - t)
 
-        return loss, len(test), {"accuracy": float(accuracy)}
+        return loss, len(test), {"accuracy": float(accuracy), "eval_time": float(time.time() - t)}
 
 
 from argparse import ArgumentParser

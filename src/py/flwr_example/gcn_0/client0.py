@@ -162,14 +162,16 @@ class GCNClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
+        t = time.time()
         train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask)
         t = time.time() - t
         return self.get_parameters(), len(train_mask), {"fit_time": float(t)}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
+        t = time.time()
         loss, accuracy = test(model, tensor_val_mask)
-        return loss, len(test_mask), {"accuracy": float(accuracy)}
+        return loss, len(test_mask), {"accuracy": float(accuracy), "eval_time": float(time.time() - t)}
 
 
 from argparse import ArgumentParser
