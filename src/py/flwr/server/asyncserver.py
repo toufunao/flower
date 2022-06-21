@@ -74,6 +74,7 @@ ReconnectResultsAndFailures = Tuple[
 ]
 
 queue = queue.Queue()
+round_time = []
 
 
 class AsyncServer:
@@ -276,6 +277,10 @@ class AsyncServer:
             # print('num rounds', str(num_rounds))
             if self.current_round == num_rounds:
                 flag = False
+                total = 0
+                for item in round_time:
+                    total += item
+                print('total time used in transmitting', total / len(round_time))
 
         # Bookkeeping
         end_time = timeit.default_timer()
@@ -532,7 +537,10 @@ def fit_clients(
 def fit_client(client: ClientProxy, ins: FitIns) -> Tuple[ClientProxy, FitRes]:
     """Refine parameters on a single client."""
     # print('server fit client')
+    t = time.time()
     fit_res = client.fit(ins)
+    t = time.time() - t
+    round_time.append(t)
     queue.put((client, fit_res))
     # print(f'queue size {queue.qsize()}')
     return client, fit_res

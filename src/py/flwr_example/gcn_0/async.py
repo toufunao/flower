@@ -78,7 +78,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--rounds",
         type=int,
-        default=500,
+        default=10,
         help=f"Total training round. Default to 3.",
     )
 

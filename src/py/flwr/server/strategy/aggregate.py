@@ -77,6 +77,11 @@ def weighted_acc_avg(results, number) -> float:
     return sum(weighted_acces) / number
 
 
+def avg_fit_time(results, number):
+    fit_time = [metrics['fit_time'] for num_examples, _, _, metrics in results]
+    return sum(fit_time) / number
+
+
 def aggregate_qffl(
         weights: Weights, deltas: List[Weights], hs_fll: List[Weights]
 ) -> Weights:
