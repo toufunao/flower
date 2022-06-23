@@ -556,12 +556,16 @@ def evaluate_clients(
 ) -> EvaluateResultsAndFailures:
     """Evaluate parameters concurrently on all selected clients."""
     # print('server eval client   sssssss')
+    t = time.time()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(evaluate_client, c, ins) for c, ins in client_instructions
         ]
         concurrent.futures.wait(futures)
+    t = time.time() - t
+    e_time = []
+    total = 0
     # Gather results
     results: List[Tuple[ClientProxy, EvaluateRes]] = []
     failures: List[BaseException] = []
@@ -572,7 +576,11 @@ def evaluate_clients(
         else:
             # Success case
             result = future.result()
+            e_time.append(t - result[1].metrics["eval_time"])
             results.append(result)
+    for t in e_time:
+        total += t
+    eval_time.append(total / len(results))
     return results, failures
 
 
@@ -581,10 +589,7 @@ def evaluate_client(
 ) -> Tuple[ClientProxy, EvaluateRes]:
     """Evaluate parameters on a single client."""
     # print('server eval client')
-    t = time.time()
     evaluate_res = client.evaluate(ins)
-    t = time.time() - t
-    eval_time.append(t - evaluate_res.metrics['eval_time'])
     return client, evaluate_res
 
 # Async里最主要的function，收到一个client的parameter直接更新并让这个client

@@ -10,7 +10,7 @@ from load_cora import *
 import sys
 import flwr as fl
 from collections import OrderedDict
-
+import time
 sys.path.append("cora")
 log_info = []
 

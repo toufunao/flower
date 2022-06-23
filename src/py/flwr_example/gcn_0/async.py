@@ -25,15 +25,6 @@ def set_parameters(parameters):
     model.load_state_dict(state_dict, strict=True)
 
 
-def fit_config(rnd: int) -> Dict[str, fl.common.Scalar]:
-    """Return a configuration with static batch size and (local) epochs."""
-    config: Dict[str, fl.common.Scalar] = {
-        "epoch_global": str(rnd),
-        "epochs": str(5),
-        "batch_size": str(128),
-    }
-    return config
-
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="GCN Server")
