@@ -14,7 +14,6 @@
 # ==============================================================================
 """Flower ClientManager."""
 
-
 import random
 import threading
 from abc import ABC, abstractmethod
@@ -53,10 +52,10 @@ class ClientManager(ABC):
 
     @abstractmethod
     def sample(
-        self,
-        num_clients: int,
-        min_num_clients: Optional[int] = None,
-        criterion: Optional[Criterion] = None,
+            self,
+            num_clients: int,
+            min_num_clients: Optional[int] = None,
+            criterion: Optional[Criterion] = None,
     ) -> List[ClientProxy]:
         """Sample a number of Flower ClientProxy instances."""
 
@@ -95,7 +94,7 @@ class SimpleClientManager(ClientManager):
         """
         if client.cid in self.clients:
             return False
-
+        print('cid', client.cid)
         self.clients[client.cid] = client
         with self._cv:
             self._cv.notify_all()
@@ -118,10 +117,10 @@ class SimpleClientManager(ClientManager):
         return self.clients
 
     def sample(
-        self,
-        num_clients: int,
-        min_num_clients: Optional[int] = None,
-        criterion: Optional[Criterion] = None,
+            self,
+            num_clients: int,
+            min_num_clients: Optional[int] = None,
+            criterion: Optional[Criterion] = None,
     ) -> List[ClientProxy]:
         """Sample a number of Flower ClientProxy instances."""
         # Block until at least num_clients are connected.
