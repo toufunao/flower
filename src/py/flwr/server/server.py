@@ -375,6 +375,8 @@ def fit_client(client: ClientProxy, ins: FitIns) -> Tuple[ClientProxy, FitRes]:
     """Refine parameters on a single client."""
     # print('fit client')
     fit_res = client.fit(ins)
+    # if fit_res.metrics['round']:
+    #     print('cid ', client.cid, ' round', fit_res.metrics['round'])
     # print('client', client.cid)
     return client, fit_res
 
