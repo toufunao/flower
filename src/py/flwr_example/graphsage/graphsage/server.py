@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--min_fit_clients",
         type=int,
-        default=2,
+        default=5,
         help=f"Minimum number of clients used during training. Defaults to 2.",
     )
     parser.add_argument(
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--rounds",
         type=int,
-        default=3,
+        default=100,
         help=f"Total training round. Default to 3.",
     )
 

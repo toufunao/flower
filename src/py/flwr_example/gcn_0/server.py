@@ -14,7 +14,7 @@ def get_eval_fn() -> Callable[[fl.common.Weights], Optional[Tuple[float, float]]
     def evaluate(weights: fl.common.Weights) -> Optional[Tuple[float, float]]:
         """Use the entire CIFAR-10 test set for evaluation."""
         set_parameters(weights)
-        return model_test(model, tensor_val_mask)
+        return model_test(model, tensor_test_mask)
 
     return evaluate
 
@@ -24,15 +24,6 @@ def set_parameters(parameters):
     state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
     model.load_state_dict(state_dict, strict=True)
 
-
-def fit_config(rnd: int) -> Dict[str, fl.common.Scalar]:
-    """Return a configuration with static batch size and (local) epochs."""
-    config: Dict[str, fl.common.Scalar] = {
-        "epoch_global": str(rnd),
-        "epochs": str(5),
-        "batch_size": str(128),
-    }
-    return config
 
 if __name__ == '__main__':
     parser = ArgumentParser(description="GCN Server")
@@ -77,7 +68,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--rounds",
         type=int,
-        default=3,
+        default=100,
         help=f"Total training round. Default to 3.",
     )
 
@@ -91,10 +82,19 @@ if __name__ == '__main__':
         min_available_clients=args.min_available_clients,
         eval_fn=get_eval_fn(),
     )
+    # strategy = fl.server.strategy.FedAvg(
+    #     fraction_fit=0.1,
+    #     fraction_eval=0.1,
+    #     min_fit_clients=12,
+    #     min_eval_clients=12,
+    #     min_available_clients=13,
+    #     eval_fn=get_eval_fn(),
+    # )
 
     # Start server
     fl.server.start_server(
         server_address="[::]:8080",
+        # config={"num_rounds": args.rounds},
         config={"num_rounds": args.rounds},
         strategy=strategy,
     )

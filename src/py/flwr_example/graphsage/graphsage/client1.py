@@ -98,9 +98,10 @@ enc2.num_samples = 4
 graphsage = SupervisedGraphSage(7, enc2)
 #    graphsage.cuda()
 rand_indices = np.random.permutation(num_nodes)
-test = rand_indices[:int(0.4 * num_nodes)]
-val = rand_indices[int(0.4 * num_nodes):int(0.6 * num_nodes)]
-train = list(rand_indices[int(0.6 * num_nodes):])
+test = rand_indices[:int(0.2 * num_nodes)]
+test = rand_indices[:int(0.2 * num_nodes)]
+val = rand_indices[int(0.2 * num_nodes):int(0.4 * num_nodes)]
+train = list(rand_indices[int(0.4 * num_nodes):])
 
 
 def f_train(graphsage, train, labels):

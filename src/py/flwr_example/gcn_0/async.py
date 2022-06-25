@@ -14,7 +14,7 @@ def get_eval_fn() -> Callable[[fl.common.Weights], Optional[Tuple[float, float]]
     def evaluate(weights: fl.common.Weights) -> Optional[Tuple[float, float]]:
         """Use the entire CIFAR-10 test set for evaluation."""
         set_parameters(weights)
-        return model_test(model, tensor_val_mask)
+        return model_test(model, tensor_test_mask)
 
     return evaluate
 

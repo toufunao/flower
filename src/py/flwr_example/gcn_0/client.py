@@ -85,9 +85,9 @@ class GcnNet(nn.Module):
 # ## 模型训练
 
 # 超参数定义
-learning_rate = 0.1
+learning_rate = 0.01
 weight_decay = 5e-4
-epochs = 100
+epochs = 200
 
 # 模型定义：Model, Loss, Optimizer
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -145,6 +145,7 @@ def model_test(model, tensor_val_mask):
         loss += criterion(test_mask_logits, tensor_y[tensor_val_mask]).item()
     # print(loss, float(accuarcy))
     log_info.append([loss, float(accuarcy)])
+    print('loss: ', loss, 'acc: ', float(accuarcy))
     return loss, {"accuracy": float(accuarcy)}
 
 
@@ -167,7 +168,7 @@ class GCNClient(fl.client.NumPyClient):
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = model_test(model, tensor_val_mask)
+        loss, accuracy = model_test(model, tensor_test_mask)
         return loss, len(test_mask), {"accuracy": float(accuracy)}
 
 

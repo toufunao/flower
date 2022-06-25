@@ -9,8 +9,8 @@ import random
 from sklearn.metrics import f1_score
 from collections import defaultdict
 
-from graphsage.encoders import Encoder
-from graphsage.aggregators import MeanAggregator
+from encoders import Encoder
+from aggregators import MeanAggregator
 import pandas as pd
 
 """
