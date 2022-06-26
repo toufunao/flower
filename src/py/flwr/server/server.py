@@ -148,16 +148,19 @@ class Server:
             res_cen = self.strategy.evaluate(parameters=self.parameters)
             if res_cen is not None:
                 loss_cen, metrics_cen = res_cen
+                t = timeit.default_timer() - start_time
                 log(
                     INFO,
                     "fit progress: (%s, %s, %s, %s)",
                     current_round,
                     loss_cen,
                     metrics_cen,
-                    timeit.default_timer() - start_time,
+                    t,
                 )
                 history.add_loss_centralized(rnd=current_round, loss=loss_cen)
                 history.add_metrics_centralized(rnd=current_round, metrics=metrics_cen)
+                history.add_timer_acc_centralized(rnd=current_round, t=t, acc=metrics_cen['accuracy'])
+                history.add_timer_losses_centralized(rnd=current_round, t=t, loss=loss_cen)
 
             # Evaluate model on a sample of available clients
             # if current_round == 1 or current_round % 10 == 0:

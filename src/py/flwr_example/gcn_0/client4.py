@@ -162,6 +162,8 @@ class GCNClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         self.set_parameters(parameters)
         train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask)
+        cp = random.randint(0, 10)
+        time.sleep(cp)
         return self.get_parameters(), len(train_mask), {}
 
     def evaluate(self, parameters, config):

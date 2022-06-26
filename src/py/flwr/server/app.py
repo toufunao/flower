@@ -150,6 +150,10 @@ def _fl(
     log(INFO, "app_fit: metrics_distributed %s", str(hist.metrics_distributed))
     log(INFO, "app_fit: losses_centralized %s", str(hist.losses_centralized))
     log(INFO, "app_fit: metrics_centralized %s", str(hist.metrics_centralized))
+    log(INFO, "app_fit: losses_timer_distributed %s", str(hist.timer_losses_distributed))
+    log(INFO, "app_fit: acc_timer_distributed %s", str(hist.timer_acc_distributed))
+    log(INFO, "app_fit: losses_timer_centralized %s", str(hist.timer_losses_centralized))
+    log(INFO, "app_fit: acc_timer_centralized %s", str(hist.timer_acc_centralized))
 
     if force_final_distributed_eval:
         # Temporary workaround to force distributed evaluation

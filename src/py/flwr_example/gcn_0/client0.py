@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import scipy.sparse as sp
 import torch
@@ -164,6 +166,8 @@ class GCNClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         t = time.time()
         train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask)
+        cp = random.randint(0, 10)
+        time.sleep(cp)
         t = time.time() - t
         return self.get_parameters(), len(train_mask), {"fit_time": float(t)}
 

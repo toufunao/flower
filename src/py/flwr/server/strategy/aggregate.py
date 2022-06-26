@@ -41,7 +41,7 @@ def aggregate(results: List[Tuple[Weights, int]]) -> Weights:
 
 
 def aggregate_async(
-        gl_weights: Weights, results: List[Tuple[Weights, int]], alpha: float
+        gl_weights: Weights, results: List[Tuple[Weights, int]], alpha
 ) -> Weights:
     """Update global model by weighted aggregation"""
 

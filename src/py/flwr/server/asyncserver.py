@@ -234,20 +234,23 @@ class AsyncServer:
                 # print(time.time() - s)
                 # Evaluate model using strategy implementation
                 # if self.current_round % 10 == 0:
-                if self.current_round % 10 == 0 or self.current_round == num_rounds:
+                # if self.current_round % 10 == 0 or self.current_round == num_rounds:
+                if True:
                     res_cen = self.strategy.evaluate(parameters=self.parameters)
+                    # self.current_round = int(self.current_round / 10)
                     if res_cen is not None:
                         loss_cen, metrics_cen = res_cen
                         log(
                             INFO,
                             "fit progress: (%s, %s, %s, %s)",
-                            int(self.current_round / 10),
+                            # int(self.current_round / 10),
+                            int(self.current_round),
                             loss_cen,
                             metrics_cen,
                             timeit.default_timer() - start_time,
                         )
-                        history.add_loss_centralized(rnd=int(self.current_round / 10), loss=loss_cen)
-                        history.add_metrics_centralized(rnd=int(self.current_round / 10), metrics=metrics_cen)
+                        history.add_loss_centralized(rnd=int(self.current_round), loss=loss_cen)
+                        history.add_metrics_centralized(rnd=int(self.current_round), metrics=metrics_cen)
 
                     # local evaluation
                 if not self.flag:
@@ -263,6 +266,7 @@ class AsyncServer:
                             )
                 else:
                     if self.current_round == 1 or self.current_round % 10 == 0 or self.current_round == num_rounds:
+                        # if True:
                         print(future.exception())
                         # res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
                         res_fed = self.evaluate_round(rnd=self.current_round)

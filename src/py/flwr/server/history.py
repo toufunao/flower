@@ -28,6 +28,10 @@ class History:
         self.losses_centralized: List[Tuple[int, float]] = []
         self.metrics_distributed: Dict[str, List[Tuple[int, Scalar]]] = {}
         self.metrics_centralized: Dict[str, List[Tuple[int, Scalar]]] = {}
+        self.timer_losses_distributed: List[Tuple[int, float, float]] = []
+        self.timer_losses_centralized: List[Tuple[int, float, float]] = []
+        self.timer_acc_distributed: List[Tuple[int, float, float]] = []
+        self.timer_acc_centralized: List[Tuple[int, float, float]] = []
 
     def add_loss_distributed(self, rnd: int, loss: float) -> None:
         """Add one loss entry (from distributed evaluation)."""
@@ -55,6 +59,22 @@ class History:
                 self.metrics_centralized[key] = []
             self.metrics_centralized[key].append((rnd, metrics[key]))
 
+    def add_timer_losses_distributed(self, rnd: int, t: float, loss: float) -> None:
+        """Add one loss entry (from distributed evaluation)."""
+        self.timer_losses_distributed.append((rnd, t, loss))
+
+    def add_timer_losses_centralized(self, rnd: int, t: float, loss: float) -> None:
+        """Add one loss entry (from centralized evaluation)."""
+        self.timer_losses_centralized.append((rnd, t, loss))
+
+    def add_timer_acc_distributed(self, rnd: int, t: float, acc: float) -> None:
+        """Add one loss entry (from distributed evaluation)."""
+        self.timer_acc_distributed.append((rnd, t, acc))
+
+    def add_timer_acc_centralized(self, rnd: int, t: float, acc: float) -> None:
+        """Add one loss entry (from centralized evaluation)."""
+        self.timer_acc_centralized.append((rnd, t, acc))
+
     def __repr__(self) -> str:
         rep = ""
         if self.losses_distributed:
@@ -71,4 +91,28 @@ class History:
             rep += "History (metrics, distributed):\n" + str(self.metrics_distributed)
         if self.metrics_centralized:
             rep += "History (metrics, centralized):\n" + str(self.metrics_centralized)
+        if self.timer_losses_distributed:
+            rep += "History (loss, distributed):\n" + reduce(
+                lambda a, b: a + b,
+                [f"\tround {rnd}  time {t}: {loss}\n" for rnd, t, loss in self.timer_losses_distributed],
+            )
+
+        if self.timer_losses_centralized:
+            rep += "History (loss, centralized):\n" + reduce(
+                lambda a, b: a + b,
+                [f"\tround {rnd}  time {t}: {loss}\n" for rnd, t, loss in self.timer_losses_centralized],
+            )
+
+        if self.timer_acc_distributed:
+            rep += "History (acc, distributed):\n" + reduce(
+                lambda a, b: a + b,
+                [f"\tround {rnd}  time {t}: {loss}\n" for rnd, t, loss in self.timer_acc_distributed],
+            )
+
+        if self.timer_losses_centralized:
+            rep += "History (acc, centralized):\n" + reduce(
+                lambda a, b: a + b,
+                [f"\tround {rnd}  time {t}: {loss}\n" for rnd, t, loss in self.timer_acc_centralized],
+            )
+
         return rep
