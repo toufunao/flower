@@ -240,6 +240,7 @@ class AsyncServer:
                     # self.current_round = int(self.current_round / 10)
                     if res_cen is not None:
                         loss_cen, metrics_cen = res_cen
+                        t = timeit.default_timer() - start_time
                         log(
                             INFO,
                             "fit progress: (%s, %s, %s, %s)",
@@ -247,10 +248,12 @@ class AsyncServer:
                             int(self.current_round),
                             loss_cen,
                             metrics_cen,
-                            timeit.default_timer() - start_time,
+                            t,
                         )
                         history.add_loss_centralized(rnd=int(self.current_round), loss=loss_cen)
                         history.add_metrics_centralized(rnd=int(self.current_round), metrics=metrics_cen)
+                        history.add_timer_acc_centralized(rnd=int(self.current_round), t=t, acc=metrics_cen['accuracy'])
+                        history.add_timer_losses_centralized(rnd=int(self.current_round), t=t, loss=loss_cen)
 
                     # local evaluation
                 if not self.flag:
