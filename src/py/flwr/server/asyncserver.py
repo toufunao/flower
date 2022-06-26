@@ -234,8 +234,8 @@ class AsyncServer:
                 # print(time.time() - s)
                 # Evaluate model using strategy implementation
                 # if self.current_round % 10 == 0:
-                # if self.current_round % 10 == 0 or self.current_round == num_rounds:
-                if True:
+                if self.current_round % 10 == 0 or self.current_round == num_rounds:
+                # if True:
                     res_cen = self.strategy.evaluate(parameters=self.parameters)
                     # self.current_round = int(self.current_round / 10)
                     if res_cen is not None:
