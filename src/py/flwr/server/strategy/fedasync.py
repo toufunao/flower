@@ -74,6 +74,10 @@ class FedAsync(Strategy):
             on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
             accept_failures: bool = True,
             initial_parameters: Optional[Parameters] = None,
+            staleness: int = 0,
+            strategy: int = 0,
+            a: float = 1.0,
+            b: float = 1.0,
     ) -> None:
         """Federated Averaging strategy.
 
@@ -121,6 +125,10 @@ class FedAsync(Strategy):
         self.on_evaluate_config_fn = on_evaluate_config_fn
         self.accept_failures = accept_failures
         self.initial_parameters = initial_parameters
+        self.staleness = staleness
+        self.strategy = strategy
+        self.a = a
+        self.b = b
 
     def __repr__(self) -> str:
         rep = f"FedAvg(accept_failures={self.accept_failures})"
@@ -176,7 +184,8 @@ class FedAsync(Strategy):
     ) -> List[Tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
         # print('async config_fit')
-        config = {}
+        config = {"rnd": rnd}
+        print(config['rnd'])
         if self.on_fit_config_fn is not None:
             # Custom fit config function provided
             config = self.on_fit_config_fn(rnd)
@@ -199,7 +208,7 @@ class FedAsync(Strategy):
     ) -> Tuple[ClientProxy, FitIns]:
         """Configure the next round of training."""
         # print('async config_fit_1')
-        config = {}
+        config = {"rnd": rnd}
         global_round = rnd
         if self.on_fit_config_fn is not None:
             # Custom fit config function provided
@@ -298,6 +307,30 @@ class FedAsync(Strategy):
         ]
         gl_weights = parameters_to_weights(gl_parameters)
         # todo: weighted aggregated function
+
+        # print(len(weights_results))
+
+        alphas = []
+        rounds = [
+            fit_res.metrics['rnd']
+            for client, fit_res in results
+        ]
+
+        gaps = [(rnd - local_round) for local_round in rounds]
+
+        for gap in gaps:
+            if self.strategy == 0:
+                alphas.append(alpha)
+            elif self.strategy == 1:
+                alpha = alpha * (gap + 1) ** (-self.a)
+                alphas = alpha
+            elif self.strategy == 2:
+                if gap <= self.staleness:
+                    alphas.append(alpha)
+                else:
+                    alpha = alpha * (1 / (self.a * (gap - self.b)) + 1)
+                    alphas.append(alpha)
+        alpha = alphas[0]
         res = weights_to_parameters(aggregate_async(gl_weights, weights_results, alpha))
         # metrics = avg_fit_time(results, len(results))
 

@@ -86,7 +86,7 @@ class GcnNet(nn.Module):
 # 超参数定义
 learning_rate = 0.01
 weight_decay = 5e-4
-epochs = 200
+# epochs = 200
 
 # 模型定义：Model, Loss, Optimizer
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -105,8 +105,9 @@ values = torch.from_numpy(adjacency.data.astype(np.float32))
 tensor_adjacency = torch.sparse.FloatTensor(indices, values, (len(features), len(features))).to(device)
 
 
+
 # 训练主体函数
-def train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask):
+def train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask,epochs):
     criterion = nn.CrossEntropyLoss().to(device)  # 放train里
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)  # 放train里
     # loss_history = []
@@ -148,6 +149,10 @@ def test(model, tensor_val_mask):
 
 
 class GCNClient(fl.client.NumPyClient):
+    def __init__(self, epochs):
+        super(GCNClient, self).__init__()
+        self.epochs = epochs
+
     def get_properties(self, config):
         pass
 
@@ -161,15 +166,18 @@ class GCNClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask)
+        t = time.time()
+        train(model, learning_rate, weight_decay, tensor_x, tensor_y, tensor_train_mask,self.epochs)
         cp = random.randint(0, 10)
         time.sleep(cp)
-        return self.get_parameters(), len(train_mask), {}
+        t = time.time() - t
+        return self.get_parameters(), len(train_mask), {"fit_time": float(t), "rnd": config["rnd"]}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
+        t = time.time()
         loss, accuracy = test(model, tensor_test_mask)
-        return loss, len(test_mask), {"accuracy": float(accuracy)}
+        return loss, len(test_mask), {"accuracy": float(accuracy), "eval_time": float(time.time() - t)}
 
 
 from argparse import ArgumentParser
@@ -188,14 +196,20 @@ if __name__ == "__main__":
         default=0,
         help=f"Training number. Default to 0",
     )
+    parser.add_argument(
+        "--e",
+        type=int,
+        default=10,
+        help=f"Training number. Default to 0",
+    )
     args = parser.parse_args()
-    fl.client.start_numpy_client(args.server_address, client=GCNClient())
+    fl.client.start_numpy_client(args.server_address, client=GCNClient(args.e))
     import os
 
     if not os.path.exists('log/'):
         os.mkdir('log/')
     with open(f'log/client0_{args.n}.log', mode='w', encoding='utf-8') as f:
-        f.write("[")
+        f.write("[ ")
         for i in range(len(log_info)):
             item = log_info[i]
             f.write(" (" + str(i) + "," + str(item[0]) + "," + str(item[1]) + "),")

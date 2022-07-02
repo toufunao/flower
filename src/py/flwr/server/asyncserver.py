@@ -83,6 +83,7 @@ class AsyncServer:
 
     def __init__(
             self, client_manager: ClientManager, strategy: Optional[Strategy] = None, alpha=0.5, flag=True,
+            eval_round=1,
     ) -> None:
         # print('server init')
         self._client_manager: ClientManager = client_manager
@@ -93,6 +94,7 @@ class AsyncServer:
         self.current_round = 0
         self.alpha = alpha
         self.flag = flag
+        self.eval_round = eval_round
 
     def set_strategy(self, strategy: Strategy) -> None:
         """Replace server strategy."""
@@ -234,10 +236,10 @@ class AsyncServer:
                 # print(time.time() - s)
                 # Evaluate model using strategy implementation
                 # if self.current_round % 10 == 0:
-                if self.current_round % 9 == 0 or self.current_round == num_rounds:
-                # if True:
+                if self.current_round % self.eval_round == 0 or self.current_round == num_rounds:
+                    # if True:
                     res_cen = self.strategy.evaluate(parameters=self.parameters)
-                    # self.current_round = int(self.current_round / 10)
+                    self.current_round = int(self.current_round / self.eval_round)
                     if res_cen is not None:
                         loss_cen, metrics_cen = res_cen
                         t = timeit.default_timer() - start_time
@@ -268,17 +270,18 @@ class AsyncServer:
                                 rnd=int(self.current_round), metrics=evaluate_metrics_fed
                             )
                 else:
-                    if self.current_round == 1 or self.current_round % 10 == 0 or self.current_round == num_rounds:
+                    if self.current_round == 1 or self.current_round % self.eval_round == 0 or self.current_round == num_rounds:
                         # if True:
                         print(future.exception())
                         # res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
                         res_fed = self.evaluate_round(rnd=self.current_round)
+                        self.current_round = int(self.current_round / self.eval_round)
                         if res_fed:
                             loss_fed, evaluate_metrics_fed, _ = res_fed
                             if loss_fed:
-                                history.add_loss_distributed(rnd=int(self.current_round / 10), loss=loss_fed)
+                                history.add_loss_distributed(rnd=int(self.current_round), loss=loss_fed)
                                 history.add_metrics_distributed(
-                                    rnd=int(self.current_round / 10), metrics=evaluate_metrics_fed
+                                    rnd=int(self.current_round), metrics=evaluate_metrics_fed
                                 )
                 # print(future.exception())
 

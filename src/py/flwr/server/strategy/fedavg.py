@@ -195,7 +195,7 @@ class FedAvg(Strategy):
     ) -> List[Tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
         # print('avg config_fit')
-        config = {}
+        config = {"rnd": rnd}
         if self.on_fit_config_fn is not None:
             # Custom fit config function provided
             config = self.on_fit_config_fn(rnd)

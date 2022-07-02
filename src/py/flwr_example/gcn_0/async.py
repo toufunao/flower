@@ -25,7 +25,6 @@ def set_parameters(parameters):
     model.load_state_dict(state_dict, strict=True)
 
 
-
 if __name__ == "__main__":
     parser = ArgumentParser(description="GCN Server")
     parser.add_argument(
@@ -69,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--rounds",
         type=int,
-        default=1000,
+        default=10,
         help=f"Total training round. Default to 3.",
     )
 
@@ -80,6 +79,34 @@ if __name__ == "__main__":
         help=f"Adaptive alpha. Default to 0.5.",
     )
 
+    parser.add_argument(
+        "--staleness",
+        type=int,
+        default=0,
+        help=f"staleness. Default to 0.",
+    )
+
+    parser.add_argument(
+        "--strategy",
+        type=int,
+        default=0,
+        help=f"Agg strategy. Default to 0",
+    )
+
+    parser.add_argument(
+        "--a",
+        type=float,
+        default=1.0,
+        help=f"a. Default to 1.0.",
+    )
+
+    parser.add_argument(
+        "--b",
+        type=float,
+        default=1.0,
+        help=f"b. Default to 1.0.",
+    )
+
     args = parser.parse_args()
 
     strategy = fl.server.strategy.FedAsync(
@@ -88,10 +115,14 @@ if __name__ == "__main__":
         min_fit_clients=args.min_fit_clients,
         min_eval_clients=args.min_eval_clients,
         min_available_clients=args.min_available_clients,
+        staleness=args.staleness,
+        strategy=args.strategy,
+        a=args.a,
+        b=args.b,
         eval_fn=get_eval_fn(),
     )
     client_manager = fl.server.client_manager.SimpleClientManager()
-    server = fl.server.AsyncServer(client_manager, strategy, alpha=args.alpha)
+    server = fl.server.AsyncServer(client_manager, strategy, alpha=args.alpha, eval_round=1)
 
     # Start server
     fl.server.start_server(
