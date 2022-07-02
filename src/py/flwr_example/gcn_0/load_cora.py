@@ -56,7 +56,7 @@ def load_data(path, dataset="cora"):
     adj = normalize_adj(adj)
 
     node_list = [idx_map[item[0].astype(np.int32)] for item in idx_features_labels]
-    idx_train, idx_val, idx_test = split(node_list, shuffle=False, ratio_1=0.8, ratio_2=0.0)
+    idx_train, idx_val, idx_test = split(node_list, shuffle=False, ratio_1=0.65, ratio_2=0.0)
     features = torch.FloatTensor(np.array(features))
     labels = torch.tensor(np.array(labels))
     num_nodes = features.shape[0]

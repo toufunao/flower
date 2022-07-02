@@ -68,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--rounds",
         type=int,
-        default=10,
+        default=100,
         help=f"Total training round. Default to 3.",
     )
 
@@ -107,6 +107,13 @@ if __name__ == "__main__":
         help=f"b. Default to 1.0.",
     )
 
+    parser.add_argument(
+        "--eval_round",
+        type=int,
+        default=1,
+        help=f"eval_round. Default to 1.",
+    )
+
     args = parser.parse_args()
 
     strategy = fl.server.strategy.FedAsync(
@@ -122,7 +129,7 @@ if __name__ == "__main__":
         eval_fn=get_eval_fn(),
     )
     client_manager = fl.server.client_manager.SimpleClientManager()
-    server = fl.server.AsyncServer(client_manager, strategy, alpha=args.alpha, eval_round=1)
+    server = fl.server.AsyncServer(client_manager, strategy, alpha=args.alpha, eval_round=args.eval_round)
 
     # Start server
     fl.server.start_server(

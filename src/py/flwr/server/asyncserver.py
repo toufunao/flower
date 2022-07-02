@@ -259,7 +259,7 @@ class AsyncServer:
 
                     # local evaluation
                 if not self.flag:
-                    print(future.exception())
+                    # print(future.exception())
                     # res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
                     res_fed = self.evaluate_round(rnd=self.current_round)
                     if res_fed:
@@ -272,7 +272,7 @@ class AsyncServer:
                 else:
                     if self.current_round == 1 or self.current_round % self.eval_round == 0 or self.current_round == num_rounds:
                         # if True:
-                        print(future.exception())
+                        # print(future.exception())
                         # res_fed = self.evaluate_round_one(rnd=self.current_round, client=result[0])
                         res_fed = self.evaluate_round(rnd=self.current_round)
                         self.current_round = int(self.current_round / self.eval_round)
