@@ -146,7 +146,7 @@ class SageClient(fl.client.NumPyClient):
         # print(self.get_parameters()[0].shape)
         # print(len(self.get_parameters()) * self.get_parameters()[0].shape[0] * self.get_parameters()[0].shape[1])
         t = time.time() - t
-        return self.get_parameters(), len(train), {"fit_time": float(t)}
+        return self.get_parameters(), len(train), {"fit_time": float(t), "rnd": config["rnd"]}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)

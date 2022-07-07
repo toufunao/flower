@@ -122,7 +122,7 @@ def f_test(graphsage, val, labels):
     acc = accuracy_score(labels[val], val_output.data.numpy().argmax(axis=1))
     print('测试', loss.data.item(), float(acc))
     log_info.append((loss.data.item(), acc))
-    return loss.data.item(), acc
+    return loss.data.item(), {"accuracy": float(acc)}
 
 
 class SageClient(fl.client.NumPyClient):
@@ -182,6 +182,6 @@ if __name__ == "__main__":
         f.write("[ ")
         for i in range(len(log_info)):
             item = log_info[i]
-            f.write(" (" + str(i+1) + "," + str(item[0]) + "," + str(item[1]) + "),")
+            f.write(" (" + str(i + 1) + "," + str(item[0]) + "," + str(item[1]) + "),")
         f.write("]")
     print(f'training completed')

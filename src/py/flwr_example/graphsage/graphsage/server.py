@@ -1,6 +1,6 @@
 import flwr as fl
 from argparse import ArgumentParser
-from client import *
+from client0 import *
 from typing import Callable, Dict, List, Optional, Tuple
 
 
@@ -10,7 +10,7 @@ def get_eval_fn() -> Callable[[fl.common.Weights], Optional[Tuple[float, float]]
     def evaluate(weights: fl.common.Weights) -> Optional[Tuple[float, float]]:
         """Use the entire CIFAR-10 test set for evaluation."""
         set_parameters(weights)
-        return f_test(graphsage, val)
+        return f_test(graphsage, test, labels)
 
     return evaluate
 
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--min_fit_clients",
         type=int,
-        default=5,
+        default=12,
         help=f"Minimum number of clients used during training. Defaults to 2.",
     )
     parser.add_argument(
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--min_available_clients",
         type=int,
-        default=5,
+        default=12,
         help=f"Minimum number of total clients in the system.Defaults to 5.",
     )
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         min_fit_clients=args.min_fit_clients,
         min_eval_clients=args.min_eval_clients,
         min_available_clients=args.min_available_clients,
-        # eval_fn=get_eval_fn(),
+        eval_fn=get_eval_fn(),
     )
 
     # Start server

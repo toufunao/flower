@@ -126,8 +126,6 @@ def f_test(graphsage, val, labels):
 
 
 class SageClient(fl.client.NumPyClient):
-    def __init__(self, rnd):
-        self.round = rnd
 
     def get_parameters(self):
         # print("参数size:", [val.cpu().numpy() for _, val in graphsage.state_dict().items()])
@@ -142,7 +140,6 @@ class SageClient(fl.client.NumPyClient):
         graphsage.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
-        self.round += 1
         self.set_parameters(parameters)
         t = time.time()
         f_train(graphsage, train, labels)
@@ -150,7 +147,7 @@ class SageClient(fl.client.NumPyClient):
         # print(self.get_parameters()[0].shape)
         # print(len(self.get_parameters()) * self.get_parameters()[0].shape[0] * self.get_parameters()[0].shape[1])
         t = time.time() - t
-        return self.get_parameters(), len(train), {"fit_time": float(t), "round": self.round}
+        return self.get_parameters(), len(train), {"fit_time": float(t), "rnd": config["rnd"]}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
@@ -177,7 +174,7 @@ if __name__ == "__main__":
         help=f"Training number. Default to 0",
     )
     args = parser.parse_args()
-    fl.client.start_numpy_client(args.server_address, client=SageClient(1))
+    fl.client.start_numpy_client(args.server_address, client=SageClient())
     import os
 
     if not os.path.exists('log/'):
