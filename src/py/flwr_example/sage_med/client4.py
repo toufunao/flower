@@ -95,29 +95,30 @@ def test(model, data):
 # Initialize the model
 epoch = 1
 lr = 0.9
-model = GraphSAGE(500, 16, 3,lr)
+# model = GraphSAGE(500, 16, 3, lr)
 
 
 class SageClient(fl.client.NumPyClient):
-    def __init__(self, epochs):
+    def __init__(self, epochs, lr):
         super(SageClient, self).__init__()
         self.epochs = epochs
+        self.model = GraphSAGE(500, 16, 3, lr)
 
     def get_properties(self, config):
         pass
 
     def get_parameters(self):
-        return [val.cpu().numpy() for _, val in model.state_dict().items()]
+        return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
     def set_parameters(self, parameters):
-        params_dict = zip(model.state_dict().keys(), parameters)
+        params_dict = zip(self.model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        model.load_state_dict(state_dict, strict=True)
+        self.model.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
         t = time.time()
-        model.fit(data, self.epochs)
+        self.model.fit(data, self.epochs)
         cp = random.randint(0, 10)
         time.sleep(cp)
         t = time.time() - t
@@ -125,7 +126,7 @@ class SageClient(fl.client.NumPyClient):
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = test(model, data)
+        loss, accuracy = test(self.model, data)
         return loss, len(test_mask), {"accuracy": float(accuracy)}
 
 
@@ -151,8 +152,14 @@ if __name__ == "__main__":
         default=10,
         help=f"Training number. Default to 0",
     )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.9,
+        help=f"Learning rate default 0.9.",
+    )
     args = parser.parse_args()
-    fl.client.start_numpy_client(args.server_address, client=SageClient(args.e))
+    fl.client.start_numpy_client(args.server_address, client=SageClient(args.e, args.lr))
     import os
 
     if not os.path.exists('log/'):
