@@ -326,7 +326,7 @@ class FedAsync(Strategy):
                 if gap <= self.staleness:
                     alphas.append(alpha)
                 else:
-                    alpha = alpha * (1 / (self.a * (gap - self.staleness)) + 1)
+                    alpha = alpha * (1 / (self.a * (gap - self.staleness) + 1))
                     alphas.append(alpha)
         alpha = alphas[0]
         res = weights_to_parameters(aggregate_async(gl_weights, weights_results, alpha))
