@@ -77,7 +77,6 @@ class FedAsync(Strategy):
             staleness: int = 0,
             strategy: int = 0,
             a: float = 1.0,
-            b: float = 1.0,
     ) -> None:
         """Federated Averaging strategy.
 
@@ -128,7 +127,6 @@ class FedAsync(Strategy):
         self.staleness = staleness
         self.strategy = strategy
         self.a = a
-        self.b = b
 
     def __repr__(self) -> str:
         rep = f"FedAvg(accept_failures={self.accept_failures})"
@@ -328,7 +326,7 @@ class FedAsync(Strategy):
                 if gap <= self.staleness:
                     alphas.append(alpha)
                 else:
-                    alpha = alpha * (1 / (self.a * (gap - self.b)) + 1)
+                    alpha = alpha * (1 / (self.a * (gap - self.staleness)) + 1)
                     alphas.append(alpha)
         alpha = alphas[0]
         res = weights_to_parameters(aggregate_async(gl_weights, weights_results, alpha))
