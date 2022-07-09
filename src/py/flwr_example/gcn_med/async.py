@@ -101,13 +101,6 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--b",
-        type=float,
-        default=1.0,
-        help=f"b. Default to 1.0.",
-    )
-
-    parser.add_argument(
         "--eval_round",
         type=int,
         default=1,
@@ -125,7 +118,6 @@ if __name__ == "__main__":
         staleness=args.staleness,
         strategy=args.strategy,
         a=args.a,
-        b=args.b,
         eval_fn=get_eval_fn(),
     )
     client_manager = fl.server.client_manager.SimpleClientManager()
