@@ -332,7 +332,7 @@ class FedAsync(Strategy):
         res = weights_to_parameters(aggregate_async(gl_weights, weights_results, alpha))
         # metrics = avg_fit_time(results, len(results))
 
-        return res, {}
+        return res, {"alpha": alpha}
         # return res, metrics
 
     def aggregate_evaluate(

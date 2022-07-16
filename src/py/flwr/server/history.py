@@ -32,6 +32,7 @@ class History:
         self.timer_losses_centralized: List[Tuple[int, float, float]] = []
         self.timer_acc_distributed: List[Tuple[int, float, float]] = []
         self.timer_acc_centralized: List[Tuple[int, float, float]] = []
+        self.alpha_cnetralized: List[Tuple[int, float, float]] = []
 
     def add_loss_distributed(self, rnd: int, loss: float) -> None:
         """Add one loss entry (from distributed evaluation)."""
@@ -75,6 +76,9 @@ class History:
         """Add one loss entry (from centralized evaluation)."""
         self.timer_acc_centralized.append((rnd, t, acc))
 
+    def add_alpha_cnetralized(self, rnd: int, t: float, alpha: float) -> None:
+        self.alpha_cnetralized.append((rnd, t, alpha))
+
     def __repr__(self) -> str:
         rep = ""
         if self.losses_distributed:
@@ -113,6 +117,12 @@ class History:
             rep += "History (acc, centralized):\n" + reduce(
                 lambda a, b: a + b,
                 [f"\tround {rnd}  time {t}: {loss}\n" for rnd, t, loss in self.timer_acc_centralized],
+            )
+
+        if self.alpha_cnetralized:
+            rep += "History (alpha, centralized):\n" + reduce(
+                lambda a, b: a + b,
+                [f"\tround {rnd}  time {t}: {alpha}\n" for rnd, t, alpha in self.alpha_cnetralized],
             )
 
         return rep

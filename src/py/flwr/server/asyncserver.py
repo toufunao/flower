@@ -221,6 +221,9 @@ class AsyncServer:
                 ] = self.strategy.weighted_aggregate_fit(rnd=self.current_round, alpha=self.alpha,
                                                          gl_parameters=self.parameters,
                                                          results=results, failures=[])
+                _, metric = aggregated_result
+                alpha = metric["alpha"]
+                print("alpha", alpha)
 
                 if aggregated_result is not None:
                     parameters_aggregated, metrics_aggregated = aggregated_result
@@ -237,7 +240,7 @@ class AsyncServer:
                 # Evaluate model using strategy implementation
                 # if self.current_round % 10 == 0:
                 if self.current_round % self.eval_round == 0 or self.current_round == num_rounds:
-                # if True:
+                    # if True:
                     res_cen = self.strategy.evaluate(parameters=self.parameters)
                     self.current_round = int(self.current_round / self.eval_round)
                     if res_cen is not None:
@@ -256,6 +259,7 @@ class AsyncServer:
                         history.add_metrics_centralized(rnd=int(self.current_round), metrics=metrics_cen)
                         history.add_timer_acc_centralized(rnd=int(self.current_round), t=t, acc=metrics_cen['accuracy'])
                         history.add_timer_losses_centralized(rnd=int(self.current_round), t=t, loss=loss_cen)
+                        history.add_alpha_cnetralized(rnd=int(self.current_round), t=t, alpha=alpha)
 
                     # local evaluation
                 if not self.flag:
