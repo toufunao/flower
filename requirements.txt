@@ -1,0 +1,15 @@
+grpc==1.0.0
+grpcio==1.46.3
+importlib_metadata==4.11.4
+matplotlib==3.3.4
+networkx==2.5
+numpy==1.20.1
+protobuf==4.21.4
+pytest==6.2.3
+ray==1.12.0
+scikit_learn==1.1.1
+scipy==1.6.2
+semver==2.13.0
+tensorflow==2.7.0
+torch==1.10.1
+torch_geometric==2.0.4
